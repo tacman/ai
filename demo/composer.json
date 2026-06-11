@@ -38,6 +38,7 @@
         "symfony/mime": "^8.1",
         "symfony/monolog-bundle": "^4.0",
         "symfony/runtime": "^8.1",
+        "symfony/tui": "^8.1",
         "symfony/twig-bundle": "^8.1",
         "symfony/translation": "^8.1",
         "symfony/uid": "^8.1",
@@ -45,7 +46,9 @@
         "symfony/ux-icons": "^3.0",
         "symfony/ux-live-component": "^3.0",
         "symfony/ux-turbo": "^3.0",
+        "symfony/ux-typed": "^2.31",
         "symfony/yaml": "^8.1",
+        "tempest/highlight": "^2.26",
         "twig/extra-bundle": "^3.22.1",
         "twig/markdown-extra": "^3.22",
         "twig/twig": "^3.22"
