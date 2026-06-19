@@ -11,7 +11,7 @@
     ],
     "require": {
         "php": ">=8.4",
-        "symfony/ai": "dev-tac",
+        "symfony/ai": "dev-deploy",
         "ext-ctype": "*",
         "ext-gd": "*",
         "ext-iconv": "*",
@@ -66,6 +66,7 @@
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^12.1",
+        "survos/deployment-bundle": "^2.10",
         "symfony/ai-mate": "^0.12",
         "symfony/ai-monolog-mate-extension": "^0.12",
         "symfony/ai-open-responses-platform": "^0.12",

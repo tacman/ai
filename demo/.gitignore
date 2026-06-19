@@ -26,3 +26,7 @@ phpstan.neon
 ###< symfony/panther ###
 
 pgdata
+
+# The monorepo root .gitignore ignores composer.lock (libraries don't commit it),
+# but the demo is an app — track its lock for reproducible deploys.
+!composer.lock
