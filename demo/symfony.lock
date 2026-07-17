@@ -66,6 +66,9 @@
     "survos/deployment-bundle": {
         "version": "2.10.5"
     },
+    "survos/kit-bundle": {
+        "version": "2.12.9"
+    },
     "symfony/ai": {
         "version": "dev-tac"
     },
