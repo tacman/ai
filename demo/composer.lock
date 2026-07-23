@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "65ba762d6c319f0ca880af1c951e8dd5",
+    "content-hash": "b0f4be672f286783172cc1a159d35bd5",
     "packages": [
         {
             "name": "composer/semver",
@@ -160,16 +160,16 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "4.4.3",
+            "version": "4.4.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal.git",
-                "reference": "61e730f1658814821a85f2402c945f3883407dec"
+                "reference": "fb9e0ffe15e1590e24dc61c0c0a23f9a33ee42ce"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/dbal/zipball/61e730f1658814821a85f2402c945f3883407dec",
-                "reference": "61e730f1658814821a85f2402c945f3883407dec",
+                "url": "https://api.github.com/repos/doctrine/dbal/zipball/fb9e0ffe15e1590e24dc61c0c0a23f9a33ee42ce",
+                "reference": "fb9e0ffe15e1590e24dc61c0c0a23f9a33ee42ce",
                 "shasum": ""
             },
             "require": {
@@ -246,7 +246,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/dbal/issues",
-                "source": "https://github.com/doctrine/dbal/tree/4.4.3"
+                "source": "https://github.com/doctrine/dbal/tree/4.4.4"
             },
             "funding": [
                 {
@@ -262,7 +262,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-03-20T08:52:12+00:00"
+            "time": "2026-07-21T14:34:40+00:00"
         },
         {
             "name": "doctrine/deprecations",
@@ -314,16 +314,16 @@
         },
         {
             "name": "doctrine/doctrine-bundle",
-            "version": "3.2.4",
+            "version": "3.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/DoctrineBundle.git",
-                "reference": "75f1bf75d0ba099f23e7d43ebd804df5bec58c29"
+                "reference": "9b231f957020de52d6ac94fd72f0cbe8cf1eaad5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/DoctrineBundle/zipball/75f1bf75d0ba099f23e7d43ebd804df5bec58c29",
-                "reference": "75f1bf75d0ba099f23e7d43ebd804df5bec58c29",
+                "url": "https://api.github.com/repos/doctrine/DoctrineBundle/zipball/9b231f957020de52d6ac94fd72f0cbe8cf1eaad5",
+                "reference": "9b231f957020de52d6ac94fd72f0cbe8cf1eaad5",
                 "shasum": ""
             },
             "require": {
@@ -331,6 +331,7 @@
                 "doctrine/deprecations": "^1.0",
                 "doctrine/persistence": "^4",
                 "doctrine/sql-formatter": "^1.0.1",
+                "ext-mbstring": "*",
                 "php": "^8.4",
                 "symfony/cache": "^6.4 || ^7.0 || ^8.0",
                 "symfony/config": "^6.4 || ^7.0 || ^8.0",
@@ -358,6 +359,7 @@
                 "symfony/http-kernel": "^6.4 || ^7.0 || ^8.0",
                 "symfony/messenger": "^6.4 || ^7.0 || ^8.0",
                 "symfony/property-info": "^6.4 || ^7.0 || ^8.0",
+                "symfony/runtime": "^6.4 || ^7.0 || ^8.0",
                 "symfony/security-bundle": "^6.4 || ^7.0 || ^8.0",
                 "symfony/stopwatch": "^6.4 || ^7.0 || ^8.0",
                 "symfony/string": "^6.4 || ^7.0 || ^8.0",
@@ -410,7 +412,7 @@
             ],
             "support": {
                 "issues": "https://github.com/doctrine/DoctrineBundle/issues",
-                "source": "https://github.com/doctrine/DoctrineBundle/tree/3.2.4"
+                "source": "https://github.com/doctrine/DoctrineBundle/tree/3.3.1"
             },
             "funding": [
                 {
@@ -426,7 +428,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-09T19:11:55+00:00"
+            "time": "2026-07-23T10:37:01+00:00"
         },
         {
             "name": "doctrine/event-manager",
@@ -1310,16 +1312,16 @@
         },
         {
             "name": "nette/utils",
-            "version": "v4.1.4",
+            "version": "v4.1.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nette/utils.git",
-                "reference": "7da6c396d7ebe142bc857c20479d5e70a5e1aac7"
+                "reference": "b043439dbdf954e6c28b5ea7e34b0100f83165e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/utils/zipball/7da6c396d7ebe142bc857c20479d5e70a5e1aac7",
-                "reference": "7da6c396d7ebe142bc857c20479d5e70a5e1aac7",
+                "url": "https://api.github.com/repos/nette/utils/zipball/b043439dbdf954e6c28b5ea7e34b0100f83165e0",
+                "reference": "b043439dbdf954e6c28b5ea7e34b0100f83165e0",
                 "shasum": ""
             },
             "require": {
@@ -1339,7 +1341,7 @@
             },
             "suggest": {
                 "ext-gd": "to use Image",
-                "ext-iconv": "to use Strings::webalize(), toAscii(), chr() and reverse()",
+                "ext-iconv": "to use Strings::chr(), ord() and reverse()",
                 "ext-intl": "to use Strings::webalize(), toAscii(), normalize() and compare()",
                 "ext-json": "to use Nette\\Utils\\Json",
                 "ext-mbstring": "to use Strings::lower() etc...",
@@ -1395,9 +1397,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nette/utils/issues",
-                "source": "https://github.com/nette/utils/tree/v4.1.4"
+                "source": "https://github.com/nette/utils/tree/v4.1.5"
             },
-            "time": "2026-05-11T20:49:54+00:00"
+            "time": "2026-07-17T23:02:45+00:00"
         },
         {
             "name": "nyholm/psr7",
@@ -2622,12 +2624,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/tacman/ai.git",
-                "reference": "35451e0e14f0fcd93ac24653f66ce5c10867a697"
+                "reference": "d3114b33aa3473322155ed1f89fa6d2390154b88"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tacman/ai/zipball/35451e0e14f0fcd93ac24653f66ce5c10867a697",
-                "reference": "35451e0e14f0fcd93ac24653f66ce5c10867a697",
+                "url": "https://api.github.com/repos/tacman/ai/zipball/d3114b33aa3473322155ed1f89fa6d2390154b88",
+                "reference": "d3114b33aa3473322155ed1f89fa6d2390154b88",
                 "shasum": ""
             },
             "require": {
@@ -2770,7 +2772,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-deploy": "0.11.x-dev"
+                    "dev-deploy": "0.12.x-dev"
                 }
             },
             "autoload": {
@@ -2794,7 +2796,7 @@
             "support": {
                 "source": "https://github.com/tacman/ai/tree/deploy"
             },
-            "time": "2026-07-17T15:02:00+00:00"
+            "time": "2026-07-23T10:56:04+00:00"
         },
         {
             "name": "symfony/asset",
@@ -4947,16 +4949,16 @@
         },
         {
             "name": "symfony/models-dev",
-            "version": "v104.1",
+            "version": "v109.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/models-dev.git",
-                "reference": "3f92cfdfebd60c014e4cf4191ef4c02822879080"
+                "reference": "ce21683eafd7ccf89641a211bd94505a43b58515"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/models-dev/zipball/3f92cfdfebd60c014e4cf4191ef4c02822879080",
-                "reference": "3f92cfdfebd60c014e4cf4191ef4c02822879080",
+                "url": "https://api.github.com/repos/symfony/models-dev/zipball/ce21683eafd7ccf89641a211bd94505a43b58515",
+                "reference": "ce21683eafd7ccf89641a211bd94505a43b58515",
                 "shasum": ""
             },
             "type": "library",
@@ -4973,7 +4975,7 @@
             "description": "Provides the models.dev data as a Composer package",
             "support": {
                 "issues": "https://github.com/symfony/models-dev/issues",
-                "source": "https://github.com/symfony/models-dev/tree/v104.1"
+                "source": "https://github.com/symfony/models-dev/tree/v109.0"
             },
             "funding": [
                 {
@@ -4993,7 +4995,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-07-17T06:54:22+00:00"
+            "time": "2026-07-23T06:57:19+00:00"
         },
         {
             "name": "symfony/monolog-bridge",
@@ -8746,27 +8748,28 @@
         },
         {
             "name": "phpstan/phpstan-strict-rules",
-            "version": "2.0.11",
+            "version": "2.0.12",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-strict-rules.git",
-                "reference": "9b000a578b85b32945b358b172c7b20e91189024"
+                "reference": "2bc5ae19ae965663b62ac907ee6342c3903ec93b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/9b000a578b85b32945b358b172c7b20e91189024",
-                "reference": "9b000a578b85b32945b358b172c7b20e91189024",
+                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/2bc5ae19ae965663b62ac907ee6342c3903ec93b",
+                "reference": "2bc5ae19ae965663b62ac907ee6342c3903ec93b",
                 "shasum": ""
             },
             "require": {
                 "php": "^7.4 || ^8.0",
-                "phpstan/phpstan": "^2.1.39"
+                "phpstan/phpstan": "^2.1.52"
             },
             "require-dev": {
                 "php-parallel-lint/php-parallel-lint": "^1.2",
                 "phpstan/phpstan-deprecation-rules": "^2.0",
                 "phpstan/phpstan-phpunit": "^2.0",
-                "phpunit/phpunit": "^9.6"
+                "phpunit/phpunit": "^9.6",
+                "shipmonk/name-collision-detector": "^2.1"
             },
             "type": "phpstan-extension",
             "extra": {
@@ -8791,9 +8794,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-strict-rules/issues",
-                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.0.11"
+                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.0.12"
             },
-            "time": "2026-05-02T06:54:10+00:00"
+            "time": "2026-07-19T07:24:06+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -10254,16 +10257,16 @@
         },
         {
             "name": "survos/kit-bundle",
-            "version": "2.12.9",
+            "version": "2.17.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/survos/kit-bundle.git",
-                "reference": "faa227ae94b515ccd0d41a9204c293a2edd44dd2"
+                "reference": "ebf2f745b2e591c0f673bcd9edaebb918e3e8c00"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/survos/kit-bundle/zipball/faa227ae94b515ccd0d41a9204c293a2edd44dd2",
-                "reference": "faa227ae94b515ccd0d41a9204c293a2edd44dd2",
+                "url": "https://api.github.com/repos/survos/kit-bundle/zipball/ebf2f745b2e591c0f673bcd9edaebb918e3e8c00",
+                "reference": "ebf2f745b2e591c0f673bcd9edaebb918e3e8c00",
                 "shasum": ""
             },
             "require": {
@@ -10301,7 +10304,7 @@
             ],
             "support": {
                 "issues": "https://github.com/survos/kit-bundle/issues",
-                "source": "https://github.com/survos/kit-bundle/tree/2.12.9"
+                "source": "https://github.com/survos/kit-bundle/tree/2.17.0"
             },
             "funding": [
                 {
@@ -10309,7 +10312,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-07-05T17:44:32+00:00"
+            "time": "2026-07-23T11:04:17+00:00"
         },
         {
             "name": "symfony/browser-kit",
