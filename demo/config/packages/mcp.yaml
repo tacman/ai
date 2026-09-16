@@ -38,3 +38,14 @@ mcp:
                 weather:
                     transport: http
                     url: 'https://echorune.net/mcp'
+        # The app's own MCP server, so a chat agent uses the same #[McpTool] services
+        # external agents see. Spawns this app as a child process.
+        self:
+            client_info:
+                name: symfony-ai-demo-self
+                version: 0.0.1
+            servers:
+                demo:
+                    transport: stdio
+                    command: ['php', '%kernel.project_dir%/bin/console', 'mcp:server', 'demo']
+

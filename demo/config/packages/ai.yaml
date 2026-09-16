@@ -122,6 +122,12 @@ ai:
                 - { mcp_server: 'remotes.livescore' }
                 - { mcp_server: 'remotes.transit' }
                 - { mcp_server: 'remotes.weather' }
+        local_mcp:
+            platform: 'ai.platform.openai'
+            model: 'gpt-5-mini'
+            prompt: 'Answer using the tools of this application. Call a tool before answering.'
+            tools:
+                - { mcp_server: 'self.demo' }
         # Multi-agent setup
         orchestrator:
             platform: 'ai.platform.openai'

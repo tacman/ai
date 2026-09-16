@@ -30,3 +30,11 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+
+    # Serve the "local_mcp" agent's "self.demo" tools in-process instead of spawning
+    # "mcp:server demo" as a child: same server, same tools, no transport.
+    App\Mcp\LocalServerToolset:
+        decorates: 'ai.toolbox.local_mcp.mcp_toolset.self.demo'
+        arguments:
+            $name: 'demo'
+            $builder: '@mcp.server.demo.builder'
