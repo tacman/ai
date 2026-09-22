@@ -1,0 +1,31 @@
+.blog-tags-content { padding: 1.5rem; overflow-y: auto; flex: 1; min-height: 0; }
+.blog-tags-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+.blog-tags-toolbar p { margin: 0; }
+.blog-tags-toolbar form { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.blog-tags-toolbar input { accent-color: #166534; }
+.blog-tags-legend, .blog-tags-list { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; padding: 0; list-style: none; }
+.blog-tag { display: inline-flex; align-items: center; gap: .5rem; padding: .4rem .75rem; border-radius: 999px; font-size: .875rem; border: 1px solid transparent; }
+.blog-tag-strong { background: #166534; color: #fff; border-color: #14532d; }
+.blog-tag-likely { background: #dcfce7; color: #14532d; border-color: #86efac; }
+.blog-tag-uncertain { background: #fce7f3; color: #831843; border-color: #f9a8d4; }
+.blog-tag-unlikely { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.blog-tags-snippet { max-width: 80ch; line-height: 1.6; margin: .5rem 0; }
+.blog-tags-fields { margin: 1rem 0 0; }
+.blog-tags-field { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: .75rem; align-items: baseline; margin: .65rem 0; }
+.blog-tags-field dt { font-size: .875rem; font-weight: 600; }
+.blog-tags-field dd, .blog-tags-field .blog-tags-list { margin: 0; }
+@media (max-width: 480px) { .blog-tags-field { grid-template-columns: 1fr; gap: .4rem; } }
+.blog-tags-explanation, .blog-tags-source { font-size: .875rem; }
+.blog-tagged-article { padding: 1.5rem 0; border-top: 1px solid #94a3b866; }
+.blog-tagged-article h2 { font-size: 1.3rem; line-height: 1.5; margin-bottom: .5rem; }
+.blog-tagged-article h2 svg { width: 1rem; height: 1rem; }
+.blog-tags-empty { padding: 2rem 0; }
+.blog-tags-details { margin-top: 1rem; }
+.blog-tags-details summary { cursor: pointer; font-size: .875rem; font-weight: 600; }
+.blog-tags-details .blog-tags-explanation { margin: .75rem 0; }
+.blog-tagged-article:has(.blog-tags-details[open]) .blog-tags-primary { display: none; }
+.blog-tags-no-match { font-size: .875rem; margin: 1rem 0; }
+.blog-tag[data-probability] { position: relative; cursor: help; }
+.blog-tag-tooltip { display: none; position: absolute; bottom: calc(100% + .4rem); left: 50%; transform: translateX(-50%); white-space: nowrap; background: #17212f; color: #fff; padding: .35rem .6rem; border-radius: .35rem; font-size: .8rem; z-index: 2; }
+.blog-tag:hover .blog-tag-tooltip, .blog-tag:focus .blog-tag-tooltip { display: block; }
+.blog-tag:focus-visible { outline: 2px solid #475569; outline-offset: 3px; }

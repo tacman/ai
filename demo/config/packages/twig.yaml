@@ -64,6 +64,16 @@ twig:
                 gradient: 'linear-gradient(180deg, #433F77, #C43BC2)'
                 source: 'src/Blog/Chat.php'
                 line: 21
+            blog_tags:
+                label: 'Blog Tags'
+                name: 'Symfony Blog Tags'
+                tag: 'Classification'
+                description: 'Explore blog articles tagged by Jev, with probabilities for each suggested tag.'
+                model: 'TypeSafe · Jev'
+                icon: 'symfony'
+                gradient: 'linear-gradient(180deg, #166534, #4D9F65)'
+                source: 'src/BlogTags/TwigComponent.php'
+                line: 15
             document:
                 label: 'Document OCR'
                 name: 'Document OCR Bot'

@@ -246,3 +246,64 @@ itself rather than from reading the code.
 Add a class with a public method carrying `#[MateTool]` under `mate/src/`, then run
 `composer dump-autoload` and verify with `vendor/bin/mate tools:list`. See the
 [AI Mate documentation](https://symfony.com/doc/current/ai/components/mate.html) for detailed guides.
+
+## TypeSafe / Jev blog tagging (experimental branch)
+
+The `tac` branch contains a non-chat classification example. To clone this implementation:
+
+```shell
+git clone --branch tac https://github.com/tacman/ai.git
+cd ai/demo
+composer install
+docker compose up -d
+```
+
+Create a TypeSafe API key from [TypeSafe](https://typesafe.ai/) and add it to
+`demo/.env.local` (edit the file; preserve any existing settings):
+
+```dotenv
+TYPESAFE_API_KEY=your-typesafe-api-key
+```
+
+Use the PostgreSQL connection from Docker Compose, or configure `DATABASE_URL`
+for your own PostgreSQL instance. From `ai/demo`, load and classify one article:
+
+```shell
+symfony console app:blog:load-tags
+# Or evaluate up to ten entries available in the current RSS feed:
+symfony console app:blog:load-tags --limit=10
+symfony serve -d
+```
+
+Open `/blog-tags`, or select **Blog Tags** on the homepage. The loader creates
+its article table automatically and upserts by article URL. Re-running it makes
+new paid evaluations and replaces saved results for those URLs. The RSS feed is
+limited to recent entries; `--limit` does not crawl historical archive pages.
+
+Each article is sent once with all 17 fixed tag questions. Original published
+categories are collected separately, not supplied as model labels. The page reads
+saved results, so browsing and expanding **Show all tags** makes no API calls.
+No OpenAI key, embeddings, vector-store initialization or indexing is needed for
+this example. Other examples retain their own API-key requirements.
+
+Dark green badges indicate probabilities of at least 90%, light green 80–89%.
+Hover or focus a badge for its exact percentage. Each article can reveal all
+scores, including below-threshold candidates. The 80% display threshold is
+provisional, not an accuracy guarantee. The initial taxonomy deliberately retains
+the documented gap for **Documentation**, so some articles have no selected tags.
+
+The example pins `jev-1.13.0`. At the [published pricing](https://docs.typesafe.ai/models)
+checked September 22, 2026 ($0.042 per million input tokens, free output), the
+100 saved exploratory evaluations used 297,897 input tokens, approximately
+$0.0125. Your cost depends on input size and current pricing.
+
+This branch requires development versions of the TypeSafe bridge, Platform,
+Agent, AI Bundle and MCP tool; they are declared in `composer.json`. This avoids the
+stable Platform token-usage and Agent tracing incompatibilities encountered
+while testing the newly added bridge.
+
+Previously exported evaluation JSON can also be loaded without an API call:
+
+```shell
+symfony console app:blog:import-tags /path/to/evaluation.json
+```

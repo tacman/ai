@@ -4,6 +4,12 @@ index:
     defaults:
         template:  'index.html.twig'
 
+blog_tags:
+    path: '/blog-tags'
+    controller: 'Symfony\Bundle\FrameworkBundle\Controller\TemplateController'
+    defaults:
+        template: 'blog_tags.html.twig'
+
 blog:
     path: '/blog'
     controller: 'Symfony\Bundle\FrameworkBundle\Controller\TemplateController'

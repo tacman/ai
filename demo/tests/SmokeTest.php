@@ -28,7 +28,7 @@ final class SmokeTest extends WebTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('h1', 'Welcome to the Symfony AI Demo');
-        $this->assertSelectorCount(11, '.demo-card');
+        $this->assertSelectorCount(12, '.demo-card');
     }
 
     #[DataProvider('provideChats')]

@@ -7,12 +7,11 @@
         <h1 class="index-title">{{ 'home.title_prefix'|trans }} <span>Symfony AI</span> {{ 'home.title_suffix'|trans }}</h1>
         <p class="index-intro">
             {{ 'home.intro'|trans }}
-            Each example is one chatbot implemented in <code>src/**/Chat.php</code> - the AI configuration lives in
-            <code>config/packages/ai.yaml</code>.
+            Explore conversations, visual tools, and structured decisions powered by Symfony AI.
         </p>
         <div class="index-section-header">
             <h2 class="heading-accent">{{ 'home.examples'|trans }}</h2>
-            <span class="eyebrow">{{ demos|length }} chatbots</span>
+            <span class="eyebrow">{{ demos|length }} examples</span>
         </div>
         <div class="demo-grid">
             {% for route, demo in demos %}

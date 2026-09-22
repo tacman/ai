@@ -1,0 +1,55 @@
+{% macro fields(probabilities) %}
+            <dl class="blog-tags-fields">
+                {% for group, label in {category: 'Categories', topic: 'Topics'} %}
+                    {% set visible = probabilities|filter((probability, tag) => tag starts with (group ~ ':')) %}
+                    {% if visible is not empty %}
+                    <div class="blog-tags-field">
+                    <dt>{{ label }}</dt>
+                    <dd><ul class="blog-tags-list" aria-label="Suggested {{ label|lower }}">
+                    {% for tag, probability in visible %}
+                        {% set level = probability >= 0.9 ? 'strong' : (probability >= 0.8 ? 'likely' : (probability >= 0.2 ? 'uncertain' : 'unlikely')) %}
+                        <li class="blog-tag blog-tag-{{ level }}" data-probability="{{ probability }}" tabindex="0" aria-label="{{ tag == 'topic:ai' ? 'AI' : tag|split(':')|last|replace({'-': ' '})|capitalize }}: {{ (probability * 100)|number_format(0) }}% probability">
+                            <span>{{ tag == 'topic:ai' ? 'AI' : tag|split(':')|last|replace({'-': ' '})|capitalize }}</span>
+                            <span class="blog-tag-tooltip" aria-hidden="true">{{ (probability * 100)|number_format(0) }}% probability</span>
+                        </li>
+                    {% endfor %}
+                    </ul></dd>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </dl>
+{% endmacro %}
+<section class="blog-tags-content" aria-label="Tagged blog articles">
+    <div class="blog-tags-toolbar">
+        <p>Explore saved Symfony blog articles and Jev’s suggested tags.</p>
+
+    </div>
+    <div class="blog-tags-legend" aria-label="Tag probability scale">
+        <span class="blog-tag blog-tag-strong">90–100% · Strong match</span>
+        <span class="blog-tag blog-tag-likely">80–89% · Likely match</span>
+
+    </div>
+    <p class="blog-tags-explanation">Percentages show the probability that a tag applies. Values near 50% are uncertain; values near 0% indicate a likely non-match.</p>
+    {% for article in this.articles %}
+        <article class="blog-tagged-article">
+            <h2><a href="{{ article.url }}" target="_blank" rel="noopener noreferrer">{{ article.title }} {{ ux_icon('arrow-up-right') }}</a></h2>
+            <p class="blog-tags-snippet">{{ article.snippet }}</p>
+            <p class="blog-tags-source">Published in: {{ article.source_categories|join(', ') }}</p>
+            <div class="blog-tags-primary">
+                {% set selected = article.probabilities|filter(probability => probability >= 0.8) %}
+                {% if selected is empty %}
+                    <p class="blog-tags-no-match">No tags reached the 80% display threshold. Show all tags to inspect the scores.</p>
+                {% else %}
+                    {{ _self.fields(selected) }}
+                {% endif %}
+            </div>
+            <details class="blog-tags-details">
+                <summary>Show all tags <span class="blog-tags-source">({{ article.probabilities|length }} scores)</span></summary>
+                <p class="blog-tags-explanation">Pink: below the display threshold. Red: unlikely match. Near 50% means uncertain.</p>
+                {{ _self.fields(article.probabilities) }}
+            </details>
+        </article>
+    {% else %}
+        <p class="blog-tags-empty">No tagged articles yet. Saved blog evaluations will appear here.</p>
+    {% endfor %}
+</section>

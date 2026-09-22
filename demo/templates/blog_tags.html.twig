@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Blog Tags · Symfony AI Demo{% endblock %}
+{% block body_class 'chat-page blog-tags' %}
+
+{% block content %}
+    <div class="chat-page-content" style="--demo-gradient: {{ demos.blog_tags.gradient }}">
+        <section class="chat">
+            {{ include('_chat_header.html.twig', {demo: demos.blog_tags, reset: false}) }}
+            {{ component('blog_tags') }}
+        </section>
+    </div>
+{% endblock %}
