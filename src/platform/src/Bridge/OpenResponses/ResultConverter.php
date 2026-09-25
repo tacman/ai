@@ -15,6 +15,7 @@ use Symfony\AI\Platform\Exception\AuthenticationException;
 use Symfony\AI\Platform\Exception\BadRequestException;
 use Symfony\AI\Platform\Exception\ContentFilterException;
 use Symfony\AI\Platform\Exception\ExceedContextSizeException;
+use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Exception\IncompleteStreamException;
 use Symfony\AI\Platform\Exception\MalformedToolCallException;
 use Symfony\AI\Platform\Exception\MaxOutputTokensException;
@@ -70,7 +71,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * @phpstan-type FileSearchCall array{type: 'file_search_call', id?: string, status?: string, queries?: list<string>, results?: list<array<string, mixed>>|null}
  * @phpstan-type CodeInterpreterCall array{type: 'code_interpreter_call', id?: string, status?: string, code?: string|null, outputs?: list<array{type?: string, logs?: string, url?: string}>|null}
  * @phpstan-type ImageGenerationCall array{type: 'image_generation_call', id?: string, status?: string, result?: string|null}
- * @phpstan-type McpCall array{type: 'mcp_call', id?: string, status?: string, server_label?: string, name?: string, arguments?: string, output?: string|null, error?: string|null}
+ * @phpstan-type McpCall array{type: 'mcp_call', id?: string, status?: string, server_label?: string, name?: string, arguments?: string, output?: string|null, error?: string|array{type?: string, code?: int|string, message?: string}|null}
  * @phpstan-type McpListTools array{type: 'mcp_list_tools', id?: string, server_label?: string, tools?: list<array<string, mixed>>}
  * @phpstan-type McpApprovalRequest array{type: 'mcp_approval_request', id?: string, server_label?: string, name?: string, arguments?: string}
  * @phpstan-type ComputerCall array{type: 'computer_call', id?: string, status?: string, call_id?: string, action?: array<string, mixed>, pending_safety_checks?: list<array{id: string, code?: string|null, message?: string|null}>}
@@ -128,8 +129,18 @@ class ResultConverter implements ResultConverterInterface
             return new StreamResult($this->convertStream($result));
         }
 
-        $data = $result->getData();
+        return $this->convertData($result->getData());
+    }
 
+    /**
+     * Converts an already decoded response body, e.g. one line of a finished batch's result file.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @throws ExceptionInterface
+     */
+    public function convertData(array $data): ResultInterface
+    {
         if (isset($data['error']['code']) && 'content_filter' === $data['error']['code']) {
             throw new ContentFilterException($data['error']['message']);
         }
@@ -406,12 +417,17 @@ class ResultConverter implements ResultConverterInterface
      */
     private function convertMcpCall(array $item): array
     {
+        $error = $item['error'] ?? null;
+        if (\is_array($error)) {
+            $error = $error['message'] ?? json_encode($error, \JSON_THROW_ON_ERROR);
+        }
+
         return [new McpCallResult(
             $item['server_label'] ?? '',
             $item['name'] ?? '',
             $item['arguments'] ?? null,
             $item['output'] ?? null,
-            $item['error'] ?? null,
+            $error,
             $item['id'] ?? null,
             $item['status'] ?? null,
         )];

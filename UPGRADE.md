@@ -7,6 +7,7 @@ Agent
  * `Bridge\SimilaritySearch\SimilaritySearch::getUsedDocuments()` returns
    `Store\Document\VectorDocumentInterface[]` instead of `Store\Document\VectorDocument[]`, following the
    retriever it reads from. Code narrowing the returned documents to the concrete class has to widen.
+ * `Toolbox\ToolCallArgumentResolver` throws `Toolbox\Exception\InvalidToolCallArgumentsException` instead of `Toolbox\Exception\ToolException`.
 
 Platform
 --------
@@ -69,6 +70,33 @@ Platform
    needs to be passed when the provider was registered under a different name - which
    `Factory::createProvider()` does on its own.
 
+ * The Replicate bridge no longer waits on a prediction. Replicate runs every model asynchronously -
+   it accepts the input and answers with a prediction identifier - so an invocation now returns a
+   `Result\JobResult` carrying a serializable `Job\JobHandle`, which is resolved explicitly through
+   the new `Bridge\Replicate\ReplicateJobClient`. Reading the result directly through `asText()`
+   therefore throws an `UnexpectedResultTypeException`:
+
+   ```diff
+   +use Symfony\AI\Platform\Bridge\Replicate\Factory as ReplicateFactory;
+   +use Symfony\AI\Platform\Job\JobRunner;
+   +
+   -$result = $platform->invoke('llama-3-8b-instruct', $messages);
+   -echo $result->asText();
+   +$handle = $platform->invoke('llama-3-8b-instruct', $messages)->asJob();
+   +
+   +$result = (new JobRunner())->wait(ReplicateFactory::createJobClient($apiKey), $handle);
+   +echo $result->asText();
+   ```
+
+   Accordingly, `Bridge\Replicate\Client` no longer takes a clock and no longer throws on a failed
+   prediction - it performs exactly one request per call and gained `get()` for the prediction lookup
+   the job client drives. Code building the bridge through `Bridge\Replicate\Factory` is unaffected.
+
+   ```diff
+   -$client = new Client($httpClient, $clock, $apiKey);
+   +$client = new Client($httpClient, $apiKey);
+   ```
+
 Store
 -----
 
@@ -124,6 +152,40 @@ Store
    -$total = \count($documents);
    +$total = $store->count();
    ```
+
+ * The `endpoint` parameter of the Elasticsearch `Store` has been removed; the `Store` now expects an HTTP
+   client scoped to the Elasticsearch instance. Use the new `StoreFactory` to keep passing an endpoint:
+
+   ```diff
+   -use Symfony\AI\Store\Bridge\Elasticsearch\Store;
+   +use Symfony\AI\Store\Bridge\Elasticsearch\StoreFactory;
+
+   -$store = new Store($httpClient, 'http://127.0.0.1:9200', 'movies');
+   +$store = StoreFactory::create('movies', 'http://127.0.0.1:9200', $httpClient);
+   ```
+
+ * The same applies to the ManticoreSearch, Milvus, Neo4j, OpenSearch and Supabase stores: their `Store` no longer
+   accepts an endpoint or credentials and expects an HTTP client scoped to the instance instead. The removed
+   arguments moved to each bridge's new `StoreFactory`, which applies the credentials to the scoped client:
+
+   | Bridge          | Removed `Store` arguments                   | Factory arguments                          |
+   |-----------------|---------------------------------------------|--------------------------------------------|
+   | ManticoreSearch | `endpoint`                                  | `endpoint`                                 |
+   | Milvus          | `endpoint`, `apiKey`                        | `endpoint`, `apiKey` (bearer token)        |
+   | Neo4j           | `endpointUrl`, `username`, `password`       | `endpoint`, `username`, `password` (basic) |
+   | OpenSearch      | `endpoint`                                  | `endpoint`                                 |
+   | Supabase        | `endpoint`, `apiKey`                        | `endpoint`, `apiKey` (`apikey` + bearer)   |
+
+   ```diff
+   -use Symfony\AI\Store\Bridge\Milvus\Store;
+   +use Symfony\AI\Store\Bridge\Milvus\StoreFactory;
+
+   -$store = new Store($httpClient, 'http://localhost:19530', 'api-key', 'my_database', 'my_documents');
+   +$store = StoreFactory::create('my_database', 'my_documents', 'http://localhost:19530', 'api-key', $httpClient);
+   ```
+
+   Passing positional arguments to the old constructor does not fail on every bridge but shifts the values into the
+   wrong parameters, so switch to the factory or to named arguments.
 
 UPGRADE FROM 0.12 to 0.13
 =========================

@@ -27,6 +27,7 @@ use Symfony\AI\Platform\Tests\Fixtures\StructuredOutput\SchemaAttributeValuesDto
 use Symfony\AI\Platform\Tests\Fixtures\StructuredOutput\Step;
 use Symfony\AI\Platform\Tests\Fixtures\StructuredOutput\UnionType\UnionTypeDto;
 use Symfony\AI\Platform\Tests\Fixtures\StructuredOutput\User;
+use Symfony\AI\Platform\Tests\Fixtures\StructuredOutput\UserWithConstructor;
 
 final class FactoryTest extends TestCase
 {
@@ -194,6 +195,50 @@ final class FactoryTest extends TestCase
         $this->assertSame($expected, $actual);
     }
 
+    public function testBuildPropertiesHonorsPromotedConstructorDefault()
+    {
+        $actual = $this->factory->buildProperties(UserWithConstructor::class);
+
+        $this->assertNotNull($actual);
+        $this->assertSame(['id', 'name', 'createdAt', 'isActive'], $actual['required']);
+        $this->assertSame(['type' => ['integer', 'null']], $actual['properties']['age']);
+    }
+
+    public function testBuildPropertiesHonorsNonPromotedConstructorDefaults()
+    {
+        $dto = new class('continue') {
+            public readonly ?string $task;
+            public readonly ?string $artifactId;
+
+            public function __construct(?string $task, ?string $artifactId = null)
+            {
+                $this->task = $task;
+                $this->artifactId = $artifactId;
+            }
+        };
+
+        $actual = $this->factory->buildProperties($dto::class);
+
+        $this->assertNotNull($actual);
+        $this->assertSame(['task'], $actual['required']);
+        $this->assertSame(['type' => ['string', 'null']], $actual['properties']['artifactId']);
+    }
+
+    public function testBuildPropertiesWithOnlyOptionalFieldsRejectsUnknownProperties()
+    {
+        $dto = new class {
+            public function __construct(public readonly ?string $artifactId = null)
+            {
+            }
+        };
+
+        $actual = $this->factory->buildProperties($dto::class);
+
+        $this->assertNotNull($actual);
+        $this->assertArrayNotHasKey('required', $actual);
+        $this->assertFalse($actual['additionalProperties']);
+    }
+
     public function testBuildPropertiesForMathReasoningClass()
     {
         $expected = [
@@ -358,7 +403,7 @@ final class FactoryTest extends TestCase
                     'example' => '2 cups',
                 ],
             ],
-            'required' => ['name', 'taxRate', 'category', 'quantity'],
+            'required' => ['name', 'taxRate', 'category'],
             'additionalProperties' => false,
         ];
 

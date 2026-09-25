@@ -12,6 +12,7 @@
 namespace Symfony\AI\AiBundle\Tests\DependencyInjection;
 
 use AsyncAws\BedrockRuntime\BedrockRuntimeClient;
+use AsyncAws\S3Vectors\S3VectorsClient;
 use Codewithkyrian\ChromaDB\Client;
 use MongoDB\Client as MongoDbClient;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -47,11 +48,15 @@ use Symfony\AI\Platform\Bridge\Bedrock\Mantle\Factory as BedrockMantleFactory;
 use Symfony\AI\Platform\Bridge\Cache\CachePlatform;
 use Symfony\AI\Platform\Bridge\Decart\Factory as DecartFactory;
 use Symfony\AI\Platform\Bridge\Deepgram\Factory as DeepgramFactory;
+use Symfony\AI\Platform\Bridge\EdenAi\EdenAiJobClient;
+use Symfony\AI\Platform\Bridge\EdenAi\Factory as EdenAiFactory;
 use Symfony\AI\Platform\Bridge\ElevenLabs\Factory as ElevenLabsFactory;
 use Symfony\AI\Platform\Bridge\Failover\FailoverPlatform;
 use Symfony\AI\Platform\Bridge\Failover\FailoverPlatformFactory;
+use Symfony\AI\Platform\Bridge\Higgsfield\Factory as HiggsfieldFactory;
 use Symfony\AI\Platform\Bridge\MiniMax\Factory as MiniMaxFactory;
 use Symfony\AI\Platform\Bridge\Ollama\Factory as OllamaFactory;
+use Symfony\AI\Platform\Bridge\OpenAi\Factory as OpenAiFactory;
 use Symfony\AI\Platform\Bridge\Venice\Factory as VeniceFactory;
 use Symfony\AI\Platform\Capability;
 use Symfony\AI\Platform\Event\InvocationEvent;
@@ -73,17 +78,24 @@ use Symfony\AI\Store\Bridge\Cache\StoreFactory as CacheStoreFactory;
 use Symfony\AI\Store\Bridge\ChromaDb\Store as ChromaDbStore;
 use Symfony\AI\Store\Bridge\ChromaDb\StoreFactory as ChromaDbStoreFactory;
 use Symfony\AI\Store\Bridge\ClickHouse\Store as ClickhouseStore;
+use Symfony\AI\Store\Bridge\ClickHouse\StoreFactory as ClickHouseStoreFactory;
 use Symfony\AI\Store\Bridge\Cloudflare\Store as CloudflareStore;
 use Symfony\AI\Store\Bridge\Cloudflare\StoreFactory as CloudflareStoreFactory;
+use Symfony\AI\Store\Bridge\Elasticsearch\Store as ElasticsearchStore;
+use Symfony\AI\Store\Bridge\Elasticsearch\StoreFactory as ElasticsearchStoreFactory;
 use Symfony\AI\Store\Bridge\ManticoreSearch\Store as ManticoreSearchStore;
+use Symfony\AI\Store\Bridge\ManticoreSearch\StoreFactory as ManticoreSearchStoreFactory;
 use Symfony\AI\Store\Bridge\MariaDb\Distance as MariaDbDistance;
 use Symfony\AI\Store\Bridge\MariaDb\Store as MariaDbStore;
 use Symfony\AI\Store\Bridge\Meilisearch\Store as MeilisearchStore;
 use Symfony\AI\Store\Bridge\Meilisearch\StoreFactory as MeilisearchStoreFactory;
 use Symfony\AI\Store\Bridge\Milvus\Store as MilvusStore;
+use Symfony\AI\Store\Bridge\Milvus\StoreFactory as MilvusStoreFactory;
 use Symfony\AI\Store\Bridge\MongoDb\Store as MongoDbStore;
 use Symfony\AI\Store\Bridge\Neo4j\Store as Neo4jStore;
+use Symfony\AI\Store\Bridge\Neo4j\StoreFactory as Neo4jStoreFactory;
 use Symfony\AI\Store\Bridge\OpenSearch\Store as OpenSearchStore;
+use Symfony\AI\Store\Bridge\OpenSearch\StoreFactory as OpenSearchStoreFactory;
 use Symfony\AI\Store\Bridge\Pinecone\Store as PineconeStore;
 use Symfony\AI\Store\Bridge\Postgres\Distance as PostgresDistance;
 use Symfony\AI\Store\Bridge\Postgres\Store as PostgresStore;
@@ -92,11 +104,13 @@ use Symfony\AI\Store\Bridge\Qdrant\Store as QdrantStore;
 use Symfony\AI\Store\Bridge\Qdrant\StoreFactory as QdrantStoreFactory;
 use Symfony\AI\Store\Bridge\Redis\Distance as RedisDistance;
 use Symfony\AI\Store\Bridge\Redis\Store as RedisStore;
+use Symfony\AI\Store\Bridge\S3Vectors\Store as S3VectorsStore;
 use Symfony\AI\Store\Bridge\Sqlite\Distance as SqliteDistance;
 use Symfony\AI\Store\Bridge\Sqlite\Store as SqliteStore;
 use Symfony\AI\Store\Bridge\Sqlite\StoreFactory as SqliteStoreFactory;
 use Symfony\AI\Store\Bridge\Sqlite\VecStore as SqliteVecStore;
 use Symfony\AI\Store\Bridge\Supabase\Store as SupabaseStore;
+use Symfony\AI\Store\Bridge\Supabase\StoreFactory as SupabaseStoreFactory;
 use Symfony\AI\Store\Bridge\SurrealDb\Store as SurrealDbStore;
 use Symfony\AI\Store\Bridge\SurrealDb\StoreFactory as SurrealDbStoreFactory;
 use Symfony\AI\Store\Bridge\Typesense\Store as TypesenseStore;
@@ -131,7 +145,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\NativeHttpClient;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
@@ -1168,14 +1181,16 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.clickhouse.my_clickhouse_store'));
 
         $definition = $container->getDefinition('ai.store.clickhouse.my_clickhouse_store');
+        $this->assertSame([ClickHouseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ClickhouseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
-        $this->assertCount(3, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('clickhouse.http_client', (string) $definition->getArgument(0));
-        $this->assertSame('my_db', (string) $definition->getArgument(1));
-        $this->assertSame('my_table', (string) $definition->getArgument(2));
+        $this->assertCount(4, $definition->getArguments());
+        $this->assertSame('my_db', $definition->getArgument(0));
+        $this->assertSame('my_table', $definition->getArgument(1));
+        $this->assertNull($definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
+        $this->assertSame('clickhouse.http_client', (string) $definition->getArgument(3));
 
         $this->assertTrue($definition->hasTag('proxy'));
         $this->assertSame([
@@ -1209,16 +1224,16 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.clickhouse.my_clickhouse_store'));
 
         $definition = $container->getDefinition('ai.store.clickhouse.my_clickhouse_store');
+        $this->assertSame([ClickHouseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ClickhouseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
-        $this->assertCount(3, $definition->getArguments());
-        $this->assertInstanceOf(Definition::class, $definition->getArgument(0));
-        $this->assertSame(HttpClientInterface::class, $definition->getArgument(0)->getClass());
-        $this->assertSame([HttpClient::class, 'createForBaseUri'], $definition->getArgument(0)->getFactory());
-        $this->assertSame(['http://foo:bar@1.2.3.4:9999'], $definition->getArgument(0)->getArguments());
-        $this->assertSame('my_db', (string) $definition->getArgument(1));
-        $this->assertSame('my_table', (string) $definition->getArgument(2));
+        $this->assertCount(4, $definition->getArguments());
+        $this->assertSame('my_db', $definition->getArgument(0));
+        $this->assertSame('my_table', $definition->getArgument(1));
+        $this->assertSame('http://foo:bar@1.2.3.4:9999', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
+        $this->assertSame('http_client', (string) $definition->getArgument(3));
 
         $this->assertTrue($definition->hasTag('proxy'));
         $this->assertSame([
@@ -1231,6 +1246,70 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $myClickhouseStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $clickhouseMyClickhouseStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testClickhouseStoreWithCustomHttpClientAndDsnCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'clickhouse' => [
+                        'my_clickhouse_store' => [
+                            'dsn' => 'http://foo:bar@1.2.3.4:9999',
+                            'http_client' => 'clickhouse.http_client',
+                            'database' => 'my_db',
+                            'table' => 'my_table',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.clickhouse.my_clickhouse_store');
+        $this->assertSame([ClickHouseStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(ClickhouseStore::class, $definition->getClass());
+
+        $this->assertSame('http://foo:bar@1.2.3.4:9999', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
+        $this->assertSame('clickhouse.http_client', (string) $definition->getArgument(3));
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    #[DataProvider('provideInvalidHttpStoreConfigurations')]
+    public function testHttpStoreWithInvalidEndpointConfigurationThrowsException(string $type, array $config, string $message)
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage($message);
+
+        $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    $type => [
+                        'my_store' => $config,
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * @return iterable<string, array{string, array<string, mixed>, string}>
+     */
+    public static function provideInvalidHttpStoreConfigurations(): iterable
+    {
+        yield 'clickhouse without dsn and http_client' => ['clickhouse', ['database' => 'my_db', 'table' => 'my_table'], 'Either "dsn" or "http_client" must be configured.'];
+        yield 'elasticsearch without endpoint and http_client' => ['elasticsearch', [], 'Either "endpoint" or "http_client" must be configured.'];
+        yield 'manticoresearch without endpoint and http_client' => ['manticoresearch', [], 'Either "endpoint" or "http_client" must be configured.'];
+        yield 'milvus without endpoint and http_client' => ['milvus', ['collection' => 'my_collection'], 'Either "endpoint" or "http_client" must be configured.'];
+        yield 'milvus with api_key but without endpoint' => ['milvus', ['collection' => 'my_collection', 'http_client' => 'milvus.http_client', 'api_key' => 'foo'], 'The "api_key" requires an "endpoint"'];
+        yield 'neo4j without endpoint and http_client' => ['neo4j', ['vector_index_name' => 'my_index', 'node_name' => 'my_node'], 'Either "endpoint" or "http_client" must be configured.'];
+        yield 'neo4j with credentials but without endpoint' => ['neo4j', ['vector_index_name' => 'my_index', 'node_name' => 'my_node', 'http_client' => 'neo4j.http_client', 'username' => 'neo4j', 'password' => 'secret'], 'The "username" and "password" require an "endpoint"'];
+        yield 'neo4j with password but without username' => ['neo4j', ['vector_index_name' => 'my_index', 'node_name' => 'my_node', 'endpoint' => 'http://127.0.0.1:7474', 'password' => 'secret'], 'The "password" requires a "username".'];
+        yield 'opensearch without endpoint and http_client' => ['opensearch', [], 'Either "endpoint" or "http_client" must be configured.'];
+        yield 'supabase without url and http_client' => ['supabase', [], 'Either "url" or "http_client" must be configured.'];
+        yield 'supabase with api_key but without url' => ['supabase', ['http_client' => 'supabase.http_client', 'api_key' => 'foo'], 'The "api_key" requires a "url"'];
     }
 
     public function testCloudflareStoreCanBeConfigured()
@@ -1449,6 +1528,104 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(StoreInterface::class));
     }
 
+    public function testElasticsearchStoreCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'elasticsearch' => [
+                        'my_elasticsearch_store' => [
+                            'endpoint' => 'http://127.0.0.1:9200',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($container->hasDefinition('ai.store.elasticsearch.my_elasticsearch_store'));
+
+        $definition = $container->getDefinition('ai.store.elasticsearch.my_elasticsearch_store');
+        $this->assertSame([ElasticsearchStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(ElasticsearchStore::class, $definition->getClass());
+
+        $this->assertTrue($definition->isLazy());
+        $this->assertCount(6, $definition->getArguments());
+        $this->assertSame('my_elasticsearch_store', $definition->getArgument(0));
+        $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
+        $this->assertSame('_vectors', $definition->getArgument(3));
+        $this->assertSame(1536, $definition->getArgument(4));
+        $this->assertSame('cosine', $definition->getArgument(5));
+
+        $this->assertTrue($definition->hasTag('proxy'));
+        $this->assertSame([
+            ['interface' => StoreInterface::class],
+            ['interface' => ManagedStoreInterface::class],
+        ], $definition->getTag('proxy'));
+        $this->assertTrue($definition->hasTag('ai.store'));
+
+        $this->assertTrue($container->hasAlias('.'.StoreInterface::class.' $my_elasticsearch_store'));
+        $this->assertTrue($container->hasAlias(StoreInterface::class.' $myElasticsearchStore'));
+        $this->assertTrue($container->hasAlias('.'.StoreInterface::class.' $elasticsearch_my_elasticsearch_store'));
+        $this->assertTrue($container->hasAlias(StoreInterface::class.' $elasticsearchMyElasticsearchStore'));
+        $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testElasticsearchStoreWithCustomIndexCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'elasticsearch' => [
+                        'my_elasticsearch_store' => [
+                            'endpoint' => 'http://127.0.0.1:9200',
+                            'index_name' => 'foo',
+                            'vectors_field' => 'embedding',
+                            'dimensions' => 768,
+                            'similarity' => 'dot_product',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.elasticsearch.my_elasticsearch_store');
+        $this->assertSame([ElasticsearchStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(ElasticsearchStore::class, $definition->getClass());
+
+        $this->assertSame('foo', $definition->getArgument(0));
+        $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
+        $this->assertSame('embedding', $definition->getArgument(3));
+        $this->assertSame(768, $definition->getArgument(4));
+        $this->assertSame('dot_product', $definition->getArgument(5));
+    }
+
+    public function testElasticsearchStoreWithCustomHttpClientCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'elasticsearch' => [
+                        'my_elasticsearch_store' => [
+                            'endpoint' => 'http://127.0.0.1:9200',
+                            'http_client' => 'my.scoped_http_client',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.elasticsearch.my_elasticsearch_store');
+        $this->assertSame([ElasticsearchStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(ElasticsearchStore::class, $definition->getClass());
+
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(2));
+    }
+
     public function testManticoreSearchStoreCanBeConfigured()
     {
         $container = $this->buildContainer([
@@ -1466,14 +1643,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.manticoresearch.my_manticoresearch_store'));
 
         $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_manticoresearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9306', $definition->getArgument(1));
-        $this->assertSame('my_manticoresearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame('hnsw', $definition->getArgument(4));
         $this->assertSame('cosine', $definition->getArgument(5));
@@ -1510,14 +1688,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.manticoresearch.my_manticoresearch_store'));
 
         $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('test', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9306', $definition->getArgument(1));
-        $this->assertSame('test', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame('hnsw', $definition->getArgument(4));
         $this->assertSame('cosine', $definition->getArgument(5));
@@ -1554,14 +1733,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.manticoresearch.my_manticoresearch_store'));
 
         $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_manticoresearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9306', $definition->getArgument(1));
-        $this->assertSame('my_manticoresearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_foo', $definition->getArgument(3));
         $this->assertSame('hnsw', $definition->getArgument(4));
         $this->assertSame('cosine', $definition->getArgument(5));
@@ -1598,14 +1778,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.manticoresearch.my_manticoresearch_store'));
 
         $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_manticoresearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9306', $definition->getArgument(1));
-        $this->assertSame('my_manticoresearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame('hnsw', $definition->getArgument(4));
         $this->assertSame('cosine', $definition->getArgument(5));
@@ -1646,14 +1827,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.manticoresearch.my_manticoresearch_store'));
 
         $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(8, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_manticoresearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9306', $definition->getArgument(1));
-        $this->assertSame('my_manticoresearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('foo_vector', $definition->getArgument(3));
         $this->assertSame('hnsw', $definition->getArgument(4));
         $this->assertSame('cosine', $definition->getArgument(5));
@@ -1671,6 +1853,30 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $myManticoresearchStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $manticoresearchMyManticoresearchStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testManticoreSearchStoreWithCustomHttpClientCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'manticoresearch' => [
+                        'my_manticoresearch_store' => [
+                            'http_client' => 'my.scoped_http_client',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.manticoresearch.my_manticoresearch_store');
+        $this->assertSame([ManticoreSearchStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(ManticoreSearchStore::class, $definition->getClass());
+
+        $this->assertSame('my_manticoresearch_store', $definition->getArgument(0));
+        $this->assertNull($definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(2));
     }
 
     public function testMariaDbStoreCanBeConfigured()
@@ -2035,16 +2241,17 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.milvus.my_milvus_store'));
 
         $definition = $container->getDefinition('ai.store.milvus.my_milvus_store');
+        $this->assertSame([MilvusStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(MilvusStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(8, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(1));
-        $this->assertSame('foo', $definition->getArgument(2));
-        $this->assertSame('my_milvus_store', $definition->getArgument(3));
-        $this->assertSame('default', $definition->getArgument(4));
+        $this->assertSame('my_milvus_store', $definition->getArgument(0));
+        $this->assertSame('default', $definition->getArgument(1));
+        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(2));
+        $this->assertSame('foo', $definition->getArgument(3));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
+        $this->assertSame('http_client', (string) $definition->getArgument(4));
         $this->assertSame('_vectors', $definition->getArgument(5));
         $this->assertSame(1536, $definition->getArgument(6));
         $this->assertSame('COSINE', $definition->getArgument(7));
@@ -2083,16 +2290,17 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.milvus.my_milvus_store'));
 
         $definition = $container->getDefinition('ai.store.milvus.my_milvus_store');
+        $this->assertSame([MilvusStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(MilvusStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(8, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(1));
-        $this->assertSame('foo', $definition->getArgument(2));
-        $this->assertSame('test', $definition->getArgument(3));
-        $this->assertSame('default', $definition->getArgument(4));
+        $this->assertSame('test', $definition->getArgument(0));
+        $this->assertSame('default', $definition->getArgument(1));
+        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(2));
+        $this->assertSame('foo', $definition->getArgument(3));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
+        $this->assertSame('http_client', (string) $definition->getArgument(4));
         $this->assertSame('_vectors', $definition->getArgument(5));
         $this->assertSame(1536, $definition->getArgument(6));
         $this->assertSame('COSINE', $definition->getArgument(7));
@@ -2131,16 +2339,17 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.milvus.my_milvus_store'));
 
         $definition = $container->getDefinition('ai.store.milvus.my_milvus_store');
+        $this->assertSame([MilvusStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(MilvusStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(8, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(1));
-        $this->assertSame('foo', $definition->getArgument(2));
-        $this->assertSame('my_milvus_store', $definition->getArgument(3));
-        $this->assertSame('default', $definition->getArgument(4));
+        $this->assertSame('my_milvus_store', $definition->getArgument(0));
+        $this->assertSame('default', $definition->getArgument(1));
+        $this->assertSame('http://127.0.0.1:19530', $definition->getArgument(2));
+        $this->assertSame('foo', $definition->getArgument(3));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
+        $this->assertSame('http_client', (string) $definition->getArgument(4));
         $this->assertSame('_vectors', $definition->getArgument(5));
         $this->assertSame(1536, $definition->getArgument(6));
         $this->assertSame('COSINE', $definition->getArgument(7));
@@ -2157,6 +2366,33 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias('.'.StoreInterface::class.' $milvus_my_milvus_store'));
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $milvusMyMilvusStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testMilvusStoreWithCustomHttpClientCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'milvus' => [
+                        'my_milvus_store' => [
+                            'http_client' => 'my.scoped_http_client',
+                            'collection' => 'default',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.milvus.my_milvus_store');
+        $this->assertSame([MilvusStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(MilvusStore::class, $definition->getClass());
+
+        $this->assertSame('my_milvus_store', $definition->getArgument(0));
+        $this->assertSame('default', $definition->getArgument(1));
+        $this->assertNull($definition->getArgument(2));
+        $this->assertNull($definition->getArgument(3));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(4));
     }
 
     public function testMongoDbStoreCanBeConfigured()
@@ -2405,18 +2641,19 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.neo4j.my_neo4j_store'));
 
         $definition = $container->getDefinition('ai.store.neo4j.my_neo4j_store');
+        $this->assertSame([Neo4jStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(Neo4jStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(10, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(1));
-        $this->assertSame('test', $definition->getArgument(2));
-        $this->assertSame('test', $definition->getArgument(3));
-        $this->assertSame('my_neo4j_store', $definition->getArgument(4));
+        $this->assertSame('my_neo4j_store', $definition->getArgument(0));
+        $this->assertSame('test', $definition->getArgument(1));
+        $this->assertSame('foo', $definition->getArgument(2));
+        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(3));
+        $this->assertSame('test', $definition->getArgument(4));
         $this->assertSame('test', $definition->getArgument(5));
-        $this->assertSame('foo', $definition->getArgument(6));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(6));
+        $this->assertSame('http_client', (string) $definition->getArgument(6));
         $this->assertSame('embeddings', $definition->getArgument(7));
         $this->assertSame(1536, $definition->getArgument(8));
         $this->assertSame('cosine', $definition->getArgument(9));
@@ -2457,18 +2694,19 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.neo4j.my_neo4j_store'));
 
         $definition = $container->getDefinition('ai.store.neo4j.my_neo4j_store');
+        $this->assertSame([Neo4jStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(Neo4jStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(10, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(1));
-        $this->assertSame('test', $definition->getArgument(2));
-        $this->assertSame('test', $definition->getArgument(3));
-        $this->assertSame('foo', $definition->getArgument(4));
+        $this->assertSame('foo', $definition->getArgument(0));
+        $this->assertSame('test', $definition->getArgument(1));
+        $this->assertSame('foo', $definition->getArgument(2));
+        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(3));
+        $this->assertSame('test', $definition->getArgument(4));
         $this->assertSame('test', $definition->getArgument(5));
-        $this->assertSame('foo', $definition->getArgument(6));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(6));
+        $this->assertSame('http_client', (string) $definition->getArgument(6));
         $this->assertSame('embeddings', $definition->getArgument(7));
         $this->assertSame(1536, $definition->getArgument(8));
         $this->assertSame('cosine', $definition->getArgument(9));
@@ -2513,18 +2751,19 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.neo4j.my_neo4j_store'));
 
         $definition = $container->getDefinition('ai.store.neo4j.my_neo4j_store');
+        $this->assertSame([Neo4jStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(Neo4jStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(11, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(1));
-        $this->assertSame('test', $definition->getArgument(2));
-        $this->assertSame('test', $definition->getArgument(3));
-        $this->assertSame('foo', $definition->getArgument(4));
+        $this->assertSame('foo', $definition->getArgument(0));
+        $this->assertSame('test', $definition->getArgument(1));
+        $this->assertSame('foo', $definition->getArgument(2));
+        $this->assertSame('http://127.0.0.1:8000', $definition->getArgument(3));
+        $this->assertSame('test', $definition->getArgument(4));
         $this->assertSame('test', $definition->getArgument(5));
-        $this->assertSame('foo', $definition->getArgument(6));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(6));
+        $this->assertSame('http_client', (string) $definition->getArgument(6));
         $this->assertSame('_vectors', $definition->getArgument(7));
         $this->assertSame(768, $definition->getArgument(8));
         $this->assertSame('cosine', $definition->getArgument(9));
@@ -2544,6 +2783,35 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(StoreInterface::class));
     }
 
+    public function testNeo4jStoreWithCustomHttpClientCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'neo4j' => [
+                        'my_neo4j_store' => [
+                            'http_client' => 'my.scoped_http_client',
+                            'vector_index_name' => 'test',
+                            'node_name' => 'foo',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.neo4j.my_neo4j_store');
+        $this->assertSame([Neo4jStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(Neo4jStore::class, $definition->getClass());
+
+        $this->assertCount(10, $definition->getArguments());
+        $this->assertSame('my_neo4j_store', $definition->getArgument(0));
+        $this->assertNull($definition->getArgument(3));
+        $this->assertNull($definition->getArgument(4));
+        $this->assertNull($definition->getArgument(5));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(6));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(6));
+    }
+
     public function testOpenSearchStoreCanBeConfigured()
     {
         $container = $this->buildContainer([
@@ -2561,14 +2829,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('my_opensearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame(1536, $definition->getArgument(4));
         $this->assertSame('l2', $definition->getArgument(5));
@@ -2605,14 +2874,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('foo', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('foo', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame(1536, $definition->getArgument(4));
         $this->assertSame('l2', $definition->getArgument(5));
@@ -2649,14 +2919,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('my_opensearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('foo', $definition->getArgument(3));
         $this->assertSame(1536, $definition->getArgument(4));
         $this->assertSame('l2', $definition->getArgument(5));
@@ -2693,14 +2964,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('my_opensearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame(768, $definition->getArgument(4));
         $this->assertSame('l2', $definition->getArgument(5));
@@ -2737,14 +3009,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('my_opensearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame(1536, $definition->getArgument(4));
         $this->assertSame('l1', $definition->getArgument(5));
@@ -2761,6 +3034,30 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias('.'.StoreInterface::class.' $opensearch_my_opensearch_store'));
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $opensearchMyOpensearchStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testOpenSearchStoreWithScopedHttpClientOnlyCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'opensearch' => [
+                        'my_opensearch_store' => [
+                            'http_client' => 'my.scoped_http_client',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(OpenSearchStore::class, $definition->getClass());
+
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
+        $this->assertNull($definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(2));
     }
 
     public function testOpenSearchStoreWithCustomHttpClientCanBeConfigured()
@@ -2781,14 +3078,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.opensearch.my_opensearch_store'));
 
         $definition = $container->getDefinition('ai.store.opensearch.my_opensearch_store');
+        $this->assertSame([OpenSearchStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(OpenSearchStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(6, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('foo', (string) $definition->getArgument(0));
+        $this->assertSame('my_opensearch_store', $definition->getArgument(0));
         $this->assertSame('http://127.0.0.1:9200', $definition->getArgument(1));
-        $this->assertSame('my_opensearch_store', $definition->getArgument(2));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('foo', (string) $definition->getArgument(2));
         $this->assertSame('_vectors', $definition->getArgument(3));
         $this->assertSame(1536, $definition->getArgument(4));
         $this->assertSame('l2', $definition->getArgument(5));
@@ -3396,6 +3694,42 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(StoreInterface::class));
     }
 
+    public function testS3VectorsStoreCanBeConfiguredWithClientConfigurationAndFilter()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    's3vectors' => [
+                        'my_s3vectors_store' => [
+                            'vector_bucket_name' => 'my-bucket',
+                            'configuration' => [
+                                'region' => 'eu-central-1',
+                                'accessKeyId' => 'key',
+                            ],
+                            'filter' => [
+                                'category' => 'documentation',
+                                'tags' => ['symfony', 'ai'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.s3vectors.my_s3vectors_store');
+        $this->assertSame(S3VectorsStore::class, $definition->getClass());
+
+        $client = $definition->getArgument(0);
+        $this->assertInstanceOf(Definition::class, $client);
+        $this->assertSame(S3VectorsClient::class, $client->getClass());
+        $this->assertSame([['region' => 'eu-central-1', 'accessKeyId' => 'key']], $client->getArguments());
+
+        $this->assertSame('my-bucket', $definition->getArgument(1));
+        $this->assertSame('my_s3vectors_store', $definition->getArgument(2));
+        $this->assertSame(['category' => 'documentation', 'tags' => ['symfony', 'ai']], $definition->getArgument(3));
+        $this->assertSame(3, $definition->getArgument(4));
+    }
+
     public function testRedisStoreWithCustomIndexCanBeConfigured()
     {
         $container = $this->buildContainer([
@@ -3768,14 +4102,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.supabase.my_supabase_store'));
 
         $definition = $container->getDefinition('ai.store.supabase.my_supabase_store');
+        $this->assertSame([SupabaseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(SupabaseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('https://test.supabase.co', $definition->getArgument(1));
-        $this->assertSame('supabase_test_key', $definition->getArgument(2));
+        $this->assertSame('https://test.supabase.co', $definition->getArgument(0));
+        $this->assertSame('supabase_test_key', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('my_supabase_store', $definition->getArgument(3));
         $this->assertSame('embedding', $definition->getArgument(4));
         $this->assertSame(1536, $definition->getArgument(5));
@@ -3811,14 +4146,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.supabase.my_supabase_store'));
 
         $definition = $container->getDefinition('ai.store.supabase.my_supabase_store');
+        $this->assertSame([SupabaseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(SupabaseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('https://test.supabase.co', $definition->getArgument(1));
-        $this->assertSame('supabase_test_key', $definition->getArgument(2));
+        $this->assertSame('https://test.supabase.co', $definition->getArgument(0));
+        $this->assertSame('supabase_test_key', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('my_supabase_table', $definition->getArgument(3));
         $this->assertSame('embedding', $definition->getArgument(4));
         $this->assertSame(1536, $definition->getArgument(5));
@@ -3854,14 +4190,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.supabase.my_supabase_store'));
 
         $definition = $container->getDefinition('ai.store.supabase.my_supabase_store');
+        $this->assertSame([SupabaseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(SupabaseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('foo', (string) $definition->getArgument(0));
-        $this->assertSame('https://test.supabase.co', $definition->getArgument(1));
-        $this->assertSame('supabase_test_key', $definition->getArgument(2));
+        $this->assertSame('https://test.supabase.co', $definition->getArgument(0));
+        $this->assertSame('supabase_test_key', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('foo', (string) $definition->getArgument(2));
         $this->assertSame('my_supabase_store', $definition->getArgument(3));
         $this->assertSame('embedding', $definition->getArgument(4));
         $this->assertSame(1536, $definition->getArgument(5));
@@ -3876,6 +4213,30 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias('.'.StoreInterface::class.' $supabase_my_supabase_store'));
         $this->assertTrue($container->hasAlias(StoreInterface::class.' $supabaseMySupabaseStore'));
         $this->assertTrue($container->hasAlias(StoreInterface::class));
+    }
+
+    public function testSupabaseStoreWithScopedHttpClientOnlyCanBeConfigured()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'store' => [
+                    'supabase' => [
+                        'my_supabase_store' => [
+                            'http_client' => 'my.scoped_http_client',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.store.supabase.my_supabase_store');
+        $this->assertSame([SupabaseStoreFactory::class, 'create'], $definition->getFactory());
+        $this->assertSame(SupabaseStore::class, $definition->getClass());
+
+        $this->assertNull($definition->getArgument(0));
+        $this->assertNull($definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('my.scoped_http_client', (string) $definition->getArgument(2));
     }
 
     public function testSupabaseStoreWithCustomFunctionCanBeConfigured()
@@ -3897,14 +4258,15 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasDefinition('ai.store.supabase.my_supabase_store'));
 
         $definition = $container->getDefinition('ai.store.supabase.my_supabase_store');
+        $this->assertSame([SupabaseStoreFactory::class, 'create'], $definition->getFactory());
         $this->assertSame(SupabaseStore::class, $definition->getClass());
 
         $this->assertTrue($definition->isLazy());
         $this->assertCount(7, $definition->getArguments());
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(0));
-        $this->assertSame('http_client', (string) $definition->getArgument(0));
-        $this->assertSame('https://test.supabase.co', $definition->getArgument(1));
-        $this->assertSame('supabase_test_key', $definition->getArgument(2));
+        $this->assertSame('https://test.supabase.co', $definition->getArgument(0));
+        $this->assertSame('supabase_test_key', $definition->getArgument(1));
+        $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
+        $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertSame('my_supabase_store', $definition->getArgument(3));
         $this->assertSame('embedding', $definition->getArgument(4));
         $this->assertSame(1536, $definition->getArgument(5));
@@ -4634,6 +4996,52 @@ class AiBundleTest extends TestCase
         $this->assertTrue($container->hasAlias(PlatformInterface::class));
     }
 
+    public function testVeniceRegistersItsJobClient()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'platform' => [
+                    'venice' => [
+                        'api_key' => 'venice_key',
+                        'endpoint' => 'https://api.venice.ai/api/v2/',
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.platform.job_client.venice');
+
+        $this->assertSame([VeniceFactory::class, 'createJobClient'], $definition->getFactory());
+        $this->assertSame('venice_key', $definition->getArgument(0));
+        $this->assertSame('https://api.venice.ai/api/v2/', $definition->getArgument(1));
+        $this->assertSame([['key' => 'venice']], $definition->getTag('ai.platform.job_client'));
+
+        $this->assertTrue($container->hasAlias(JobClientInterface::class.' $venice'));
+    }
+
+    public function testHiggsfieldRegistersItsJobClient()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'platform' => [
+                    'higgsfield' => [
+                        'api_key' => 'higgsfield_key',
+                        'api_secret' => 'higgsfield_secret',
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.platform.job_client.higgsfield');
+
+        $this->assertSame([HiggsfieldFactory::class, 'createJobClient'], $definition->getFactory());
+        $this->assertSame('higgsfield_key', $definition->getArgument(0));
+        $this->assertSame('higgsfield_secret', $definition->getArgument(1));
+        $this->assertSame([['key' => 'higgsfield']], $definition->getTag('ai.platform.job_client'));
+
+        $this->assertTrue($container->hasAlias(JobClientInterface::class.' $higgsfield'));
+    }
+
     /**
      * A worker resolving a stored handle holds the handle, not the invocation that produced it, so
      * the job client is reachable on its own and tagged with the provider name the handle carries.
@@ -4659,6 +5067,33 @@ class AiBundleTest extends TestCase
         $this->assertSame([['key' => 'minimax']], $definition->getTag('ai.platform.job_client'));
 
         $this->assertTrue($container->hasAlias(JobClientInterface::class.' $minimax'));
+    }
+
+    /**
+     * A batch is resolved long after the request that submitted it, so the client is reachable on its own.
+     */
+    public function testOpenAiRegistersItsJobClient()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'platform' => [
+                    'openai' => [
+                        'api_key' => 'sk-openai_key_full',
+                        'region' => 'EU',
+                    ],
+                ],
+            ],
+        ]);
+
+        $definition = $container->getDefinition('ai.platform.job_client.openai');
+
+        $this->assertSame([OpenAiFactory::class, 'createJobClient'], $definition->getFactory());
+        $this->assertSame('sk-openai_key_full', $definition->getArgument(0));
+        $this->assertSame('EU', $definition->getArgument(2));
+        $this->assertCount(3, $definition->getArguments());
+        $this->assertSame([['key' => 'openai']], $definition->getTag('ai.platform.job_client'));
+
+        $this->assertTrue($container->hasAlias(JobClientInterface::class.' $openai'));
     }
 
     public function testBedrockMantlePlatformUsesCompletionsRouteByDefault()
@@ -5832,6 +6267,74 @@ class AiBundleTest extends TestCase
         $this->assertSame('ai.platform.model_catalog.perplexity', (string) $arguments[2]);
         $this->assertInstanceOf(Reference::class, $arguments[3]);
         $this->assertSame('ai.platform.contract.perplexity', (string) $arguments[3]);
+    }
+
+    public function testEdenAiPlatformConfiguration()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'platform' => [
+                    'edenai' => [
+                        'api_key' => 'edenai-test-key',
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($container->hasDefinition('ai.platform.edenai'));
+
+        $definition = $container->getDefinition('ai.platform.edenai');
+
+        $this->assertTrue($definition->isLazy());
+        $this->assertSame([
+            EdenAiFactory::class,
+            'createPlatform',
+        ], $definition->getFactory());
+
+        $arguments = $definition->getArguments();
+
+        $this->assertCount(5, $arguments);
+        $this->assertSame('edenai-test-key', $arguments[0]);
+        $this->assertInstanceOf(Reference::class, $arguments[1]);
+        $this->assertSame('http_client', (string) $arguments[1]);
+        $this->assertInstanceOf(Reference::class, $arguments[2]);
+        $this->assertSame('ai.platform.model_catalog.edenai', (string) $arguments[2]);
+        $this->assertNull($arguments[3]);
+        $this->assertInstanceOf(Reference::class, $arguments[4]);
+        $this->assertSame('event_dispatcher', (string) $arguments[4]);
+
+        $this->assertTrue($definition->hasTag('proxy'));
+        $this->assertSame([['interface' => PlatformInterface::class]], $definition->getTag('proxy'));
+        $this->assertTrue($definition->hasTag('ai.platform'));
+        $this->assertSame([['name' => 'edenai']], $definition->getTag('ai.platform'));
+    }
+
+    public function testEdenAiPlatformRegistersItsJobClient()
+    {
+        $container = $this->buildContainer([
+            'ai' => [
+                'platform' => [
+                    'edenai' => [
+                        'api_key' => 'edenai-test-key',
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertTrue($container->hasDefinition('ai.platform.job_client.edenai'));
+
+        $definition = $container->getDefinition('ai.platform.job_client.edenai');
+
+        $this->assertSame(EdenAiJobClient::class, $definition->getClass());
+        $this->assertSame([EdenAiFactory::class, 'createJobClient'], $definition->getFactory());
+        $this->assertSame([['key' => 'edenai']], $definition->getTag('ai.platform.job_client'));
+
+        $arguments = $definition->getArguments();
+
+        $this->assertSame('edenai-test-key', $arguments[0]);
+        $this->assertSame('http_client', (string) $arguments[1]);
+        $this->assertSame('https://api.edenai.run', $arguments[2]);
+        $this->assertSame('edenai', $arguments[3]);
     }
 
     public function testDeepSeekPlatformConfiguration()
@@ -9203,17 +9706,15 @@ class AiBundleTest extends TestCase
         $this->assertSame([VeniceFactory::class, 'createPlatform'], $definition->getFactory());
         $this->assertTrue($definition->isLazy());
 
-        $this->assertCount(6, $definition->getArguments());
+        $this->assertCount(5, $definition->getArguments());
         $this->assertSame('foo', $definition->getArgument(0));
         $this->assertSame('https://api.venice.ai/api/v1/', $definition->getArgument(1));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
         $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
-        $this->assertSame(ClockInterface::class, (string) $definition->getArgument(3));
+        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(3));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
-        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(4));
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(5));
-        $this->assertSame('event_dispatcher', (string) $definition->getArgument(5));
+        $this->assertSame('event_dispatcher', (string) $definition->getArgument(4));
 
         $this->assertSame([
             ['interface' => PlatformInterface::class],
@@ -9241,17 +9742,15 @@ class AiBundleTest extends TestCase
         $this->assertSame([VeniceFactory::class, 'createPlatform'], $definition->getFactory());
         $this->assertTrue($definition->isLazy());
 
-        $this->assertCount(6, $definition->getArguments());
+        $this->assertCount(5, $definition->getArguments());
         $this->assertSame('foo', $definition->getArgument(0));
         $this->assertSame('https://api.venice.ai/api/v2/', $definition->getArgument(1));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
         $this->assertSame('http_client', (string) $definition->getArgument(2));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
-        $this->assertSame(ClockInterface::class, (string) $definition->getArgument(3));
+        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(3));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
-        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(4));
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(5));
-        $this->assertSame('event_dispatcher', (string) $definition->getArgument(5));
+        $this->assertSame('event_dispatcher', (string) $definition->getArgument(4));
 
         $this->assertSame([
             ['interface' => PlatformInterface::class],
@@ -9279,17 +9778,15 @@ class AiBundleTest extends TestCase
         $this->assertSame([VeniceFactory::class, 'createPlatform'], $definition->getFactory());
         $this->assertTrue($definition->isLazy());
 
-        $this->assertCount(6, $definition->getArguments());
+        $this->assertCount(5, $definition->getArguments());
         $this->assertSame('foo', $definition->getArgument(0));
         $this->assertSame('https://api.venice.ai/api/v1/', $definition->getArgument(1));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
         $this->assertSame('foo', (string) $definition->getArgument(2));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
-        $this->assertSame(ClockInterface::class, (string) $definition->getArgument(3));
+        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(3));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
-        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(4));
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(5));
-        $this->assertSame('event_dispatcher', (string) $definition->getArgument(5));
+        $this->assertSame('event_dispatcher', (string) $definition->getArgument(4));
 
         $this->assertSame([
             ['interface' => PlatformInterface::class],
@@ -9317,17 +9814,15 @@ class AiBundleTest extends TestCase
         $this->assertSame([VeniceFactory::class, 'createPlatform'], $definition->getFactory());
         $this->assertTrue($definition->isLazy());
 
-        $this->assertCount(6, $definition->getArguments());
+        $this->assertCount(5, $definition->getArguments());
         $this->assertSame('foo', $definition->getArgument(0));
         $this->assertSame('https://api.venice.ai/api/v1/', $definition->getArgument(1));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(2));
         $this->assertSame('scoped_http_client', (string) $definition->getArgument(2));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(3));
-        $this->assertSame(ClockInterface::class, (string) $definition->getArgument(3));
+        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(3));
         $this->assertInstanceOf(Reference::class, $definition->getArgument(4));
-        $this->assertSame('ai.platform.contract.venice', (string) $definition->getArgument(4));
-        $this->assertInstanceOf(Reference::class, $definition->getArgument(5));
-        $this->assertSame('event_dispatcher', (string) $definition->getArgument(5));
+        $this->assertSame('event_dispatcher', (string) $definition->getArgument(4));
 
         $this->assertSame([
             ['interface' => PlatformInterface::class],
@@ -10078,6 +10573,9 @@ class AiBundleTest extends TestCase
                     ],
                     'openrouter' => [
                         'api_key' => 'sk-openrouter_key_full',
+                    ],
+                    'edenai' => [
+                        'api_key' => 'edenai_key_full',
                     ],
                     'lmstudio' => [
                         'host_url' => 'http://127.0.0.1:1234',

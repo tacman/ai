@@ -43,7 +43,6 @@ final class DescriberTest extends TestCase
                     ],
                 ],
             ],
-            'required' => ['steps'],
             'additionalProperties' => false,
         ], $actual);
     }

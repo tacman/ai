@@ -12,6 +12,8 @@
 namespace Symfony\AI\Agent\Bridge\Filesystem;
 
 use Symfony\AI\Agent\Bridge\Filesystem\Exception\PathSecurityException;
+use Symfony\Component\Filesystem\Path;
+use Symfony\Component\Finder\Finder;
 
 /**
  * Validates paths against security constraints.
@@ -23,7 +25,7 @@ final class PathValidator
     /**
      * @param list<string> $allowedExtensions Extensions that are allowed (e.g., ['txt', 'md']). Empty means all allowed.
      * @param list<string> $deniedExtensions  Extensions that are denied (e.g., ['php', 'exe']).
-     * @param list<string> $deniedPatterns    Glob patterns for files to deny (e.g., ['.*', '*.env*']).
+     * @param list<string> $deniedPatterns    Glob patterns for files to deny (e.g., ['.*', '*.env*', '.git/*']), matched against the base-relative path and each of its ancestor directories.
      */
     public function __construct(
         private readonly string $basePath,
@@ -62,6 +64,39 @@ final class PathValidator
         $this->assertNotDeniedPattern($resolvedPath);
 
         return $resolvedPath;
+    }
+
+    /**
+     * Validates that no path inside an already validated directory matches a denied pattern, also when relocated to an already validated destination.
+     *
+     * @throws PathSecurityException If a contained path violates security constraints
+     */
+    public function validateDirectoryContents(string $directory, ?string $destination = null): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $prefixes = [$this->makeRelative($directory)];
+
+        if (null !== $destination) {
+            $prefixes[] = $this->makeRelative($destination);
+        }
+
+        $finder = new Finder();
+        $finder->in($directory)
+            ->ignoreDotFiles(false)
+            ->ignoreVCS(false);
+
+        // Ancestors are visited by the finder as well, so each entry only needs its own name and path checked
+        foreach ($finder as $item) {
+            $relativePathname = str_replace(\DIRECTORY_SEPARATOR, '/', $item->getRelativePathname());
+
+            foreach ($prefixes as $prefix) {
+                $relativePath = ltrim($prefix.'/'.$relativePathname, '/');
+                $this->assertNotDenied($relativePath, $relativePath, $item->getFilename());
+            }
+        }
     }
 
     public function getBasePath(): string
@@ -154,12 +189,37 @@ final class PathValidator
 
     private function assertNotDeniedPattern(string $path): void
     {
-        $filename = basename($path);
+        $relativePath = $this->makeRelative($path);
 
+        if ('' === $relativePath) {
+            return;
+        }
+
+        $segments = explode('/', $relativePath);
+
+        // The path itself and each of its ancestor directories
+        foreach ($segments as $i => $segment) {
+            $this->assertNotDenied($relativePath, implode('/', \array_slice($segments, 0, $i + 1)), $segment);
+        }
+    }
+
+    private function assertNotDenied(string $relativePath, string $candidate, string $name): void
+    {
         foreach ($this->deniedPatterns as $pattern) {
-            if (fnmatch($pattern, $filename)) {
-                throw new PathSecurityException(\sprintf('Path "%s" matches denied pattern "%s".', $filename, $pattern));
+            if (fnmatch($pattern, $name) || fnmatch($pattern, $candidate, \FNM_PATHNAME)) {
+                throw new PathSecurityException(\sprintf('Path "%s" matches denied pattern "%s".', $relativePath, $pattern));
             }
         }
+    }
+
+    private function makeRelative(string $path): string
+    {
+        $basePath = realpath($this->basePath);
+
+        if (false === $basePath) {
+            throw new PathSecurityException(\sprintf('Base path "%s" does not exist.', $this->basePath));
+        }
+
+        return Path::makeRelative($path, $basePath);
     }
 }

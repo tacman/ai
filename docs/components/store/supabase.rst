@@ -85,17 +85,15 @@ Basic Configuration
 
 .. code-block:: php
 
-    use Symfony\AI\Store\Bridge\Supabase\Store;
-    use Symfony\Component\HttpClient\HttpClient;
+    use Symfony\AI\Store\Bridge\Supabase\StoreFactory;
 
-    $store = new Store(
-        HttpClient::create(),
-        'https://your-project.supabase.co',
-        'your-anon-key',
-        'documents',        // table name
-        'embedding',        // vector field name
-        768,               // vector dimension (depending on your embedding model)
-        'match_documents'   // function name
+    $store = StoreFactory::create(
+        endpoint: 'https://your-project.supabase.co',
+        apiKey: 'your-anon-key',
+        table: 'documents',
+        vectorFieldName: 'embedding',
+        vectorDimension: 768,               // depending on your embedding model
+        functionName: 'match_documents',
     );
 
 Bundle Configuration
@@ -138,7 +136,7 @@ Adding Documents
     use Symfony\Component\Uid\Uuid;
 
     $document = new VectorDocument(
-        Uuid::v4(),
+        Uuid::v4()->toRfc4122(),
         new Vector([0.1, 0.2, 0.3, /* ... 768 dimensions */]),
         new Metadata(['title' => 'My Document', 'category' => 'example'])
     );

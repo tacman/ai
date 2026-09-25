@@ -18,12 +18,15 @@ use Symfony\AI\Platform\PlainConverter;
 use Symfony\AI\Platform\Result\BaseResult;
 use Symfony\AI\Platform\Result\DeferredResult;
 use Symfony\AI\Platform\Result\InMemoryRawResult;
+use Symfony\AI\Platform\Result\MultiPartResult;
 use Symfony\AI\Platform\Result\RawHttpResult;
 use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\ResultInterface;
 use Symfony\AI\Platform\Result\Stream\Delta\TextDelta;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\Result\TextResult;
+use Symfony\AI\Platform\Result\ToolCall;
+use Symfony\AI\Platform\Result\ToolCallResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\StructuredOutput\Serializer;
 use Symfony\AI\Platform\StructuredOutput\Streaming\PartialObjectStreamListener;
@@ -128,6 +131,15 @@ final class DeferredResultTest extends TestCase
 
         $deferredResult = new DeferredResult($resultConverter, $rawHttpResponse, $options);
         $deferredResult->getResult();
+    }
+
+    public function testAsTextJoinsMultipleTextParts()
+    {
+        $result = new MultiPartResult([new TextResult("\n"), new ToolCallResult([new ToolCall('id', 'tool')]), new TextResult('Hello World')]);
+
+        $deferredResult = new DeferredResult(new PlainConverter($result), new InMemoryRawResult());
+
+        $this->assertSame("\nHello World", $deferredResult->asText());
     }
 
     public function testItKeepsResultMetadata()
@@ -467,6 +479,109 @@ final class DeferredResultTest extends TestCase
         $this->assertInstanceOf(City::class, $city);
         $this->assertSame('Berlin', $city->name);
         $this->assertSame(3500000, $city->population);
+    }
+
+    public function testDebugInfoReportsPendingStateWithoutConverting()
+    {
+        $resultConverter = $this->createMock(ResultConverterInterface::class);
+        $resultConverter->expects($this->never())->method('convert');
+
+        $deferredResult = new DeferredResult($resultConverter, new InMemoryRawResult());
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame('pending', $debugInfo['state']);
+    }
+
+    public function testDebugInfoReportsConvertedStateAfterGetResult()
+    {
+        $deferredResult = new DeferredResult(new PlainConverter(new TextResult('hi')), new InMemoryRawResult());
+        $deferredResult->getResult();
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame('converted', $debugInfo['state']);
+    }
+
+    public function testDebugInfoReportsFailedStateAfterConversionFailure()
+    {
+        $rawHttpResult = new RawHttpResult($this->createStub(SymfonyHttpResponse::class));
+
+        $resultConverter = $this->createStub(ResultConverterInterface::class);
+        $resultConverter->method('convert')->willThrowException(new RateLimitExceededException());
+
+        $deferredResult = new DeferredResult($resultConverter, $rawHttpResult);
+
+        try {
+            $deferredResult->getResult();
+            $this->fail('Expected RateLimitExceededException.');
+        } catch (RateLimitExceededException) {
+        }
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame('failed', $debugInfo['state']);
+    }
+
+    public function testDebugInfoIncludesOptionsWithoutConverting()
+    {
+        $resultConverter = $this->createMock(ResultConverterInterface::class);
+        $resultConverter->expects($this->never())->method('convert');
+
+        $options = ['temperature' => 0.7, 'model' => 'gpt-5'];
+        $deferredResult = new DeferredResult($resultConverter, new InMemoryRawResult(), $options);
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame($options, $debugInfo['options']);
+    }
+
+    public function testDebugInfoReportsNullMetadataAndErrorWhilePending()
+    {
+        $resultConverter = $this->createMock(ResultConverterInterface::class);
+        $resultConverter->expects($this->never())->method('convert');
+
+        $deferredResult = new DeferredResult($resultConverter, new InMemoryRawResult());
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertNull($debugInfo['metadata']);
+        $this->assertNull($debugInfo['error']);
+    }
+
+    public function testDebugInfoIncludesMetadataAfterGetResult()
+    {
+        $result = new TextResult('Hello World');
+        $result->getMetadata()->add('foo', 'bar');
+        $converter = new PlainConverter($result);
+
+        $deferredResult = new DeferredResult($converter, new InMemoryRawResult());
+        $deferredResult->getResult();
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame('bar', $debugInfo['metadata']['foo']);
+    }
+
+    public function testDebugInfoIncludesErrorMessageAfterConversionFailure()
+    {
+        $rawHttpResult = new RawHttpResult($this->createStub(SymfonyHttpResponse::class));
+        $exception = new RateLimitExceededException(null, 'Provider is throttling requests.');
+
+        $resultConverter = $this->createStub(ResultConverterInterface::class);
+        $resultConverter->method('convert')->willThrowException($exception);
+
+        $deferredResult = new DeferredResult($resultConverter, $rawHttpResult);
+
+        try {
+            $deferredResult->getResult();
+            $this->fail('Expected RateLimitExceededException.');
+        } catch (RateLimitExceededException) {
+        }
+
+        $debugInfo = $deferredResult->__debugInfo();
+
+        $this->assertSame($exception->getMessage(), $debugInfo['error']);
     }
 
     public function testAsObjectFinishesStreamAfterExceptionDuringIteration()

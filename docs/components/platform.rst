@@ -53,7 +53,7 @@ The component provides a model base class :class:`Symfony\\AI\\Platform\\Model` 
 capabilities, and additional options. Usually, bridges to specific providers extend this base class to provide a quick
 start for vendor-specific models and their capabilities.
 
-Capabilities are a list of strings defined by :class:`Symfony\\AI\\Platform\\Capability`, which can be used to check if a model
+Capabilities are a list of enum cases defined by :class:`Symfony\\AI\\Platform\\Capability`, which can be used to check if a model
 supports a specific feature, like ``Capability::INPUT_AUDIO``, ``Capability::OUTPUT_IMAGE``, or ``Capability::THINKING``.
 
 Options are additional parameters that can be passed to the model, like ``temperature`` or ``max_output_tokens``, and are
@@ -62,21 +62,22 @@ usually defined by the specific models and their documentation.
 Model Size Variants
 ~~~~~~~~~~~~~~~~~~~
 
-For providers like Ollama, you can specify model size variants using a colon notation (e.g., ``qwen3:32b``, ``llama3:7b``).
-If the exact model name with size variant is not found in the catalog, the system will automatically fall back to the base
-model name (``qwen3``, ``llama3``) and use its capabilities while preserving the full model name for the provider.
+For catalogs based on :class:`Symfony\\AI\\Platform\\ModelCatalog\\AbstractModelCatalog`, you can specify model size
+variants using a colon notation (e.g., ``ai/qwen3:32B-Q4_K_M``). If the exact model name with size variant is not found in
+the catalog, the system will automatically fall back to the base model name (``ai/qwen3``) and use its capabilities while
+preserving the full model name for the provider.
 
 You can also combine size variants with query parameters::
 
-    use Symfony\AI\Platform\Bridge\Ollama\ModelCatalog;
+    use Symfony\AI\Platform\Bridge\DockerModelRunner\ModelCatalog;
 
     $catalog = new ModelCatalog();
 
     // Get model with size variant
-    $model = $catalog->getModel('qwen3:32b');
+    $model = $catalog->getModel('ai/qwen3:32B-Q4_K_M');
 
     // Get model with size variant and query parameters
-    $model = $catalog->getModel('qwen3:32b?temperature=0.5&top_p=0.9');
+    $model = $catalog->getModel('ai/qwen3:32B-Q4_K_M?temperature=0.5&top_p=0.9');
 
 Custom models
 ~~~~~~~~~~~~~
@@ -127,14 +128,14 @@ Supported Models & Platforms
 ----------------------------
 
 * **Language Models**
-  * `OpenAI's GPT`_ with `OpenAI`_, `Azure`_ and `OpenRouter`_ as Platform
-  * `Anthropic's Claude`_ with `Anthropic`_ and `AWS Bedrock`_ as Platform
+  * `OpenAI's GPT`_ with `OpenAI`_, `Azure`_, `OpenRouter`_ and `Eden AI`_ as Platform
+  * `Anthropic's Claude`_ with `Anthropic`_, `AWS Bedrock`_ and `Eden AI`_ as Platform
   * `Meta's Llama`_ with `Azure`_, `Ollama`_, `Replicate`_, `AWS Bedrock`_ and `OpenRouter`_ as Platform
-  * `Gemini`_ with `Google`_, `Vertex AI`_ and `OpenRouter`_ as Platform
+  * `Gemini`_ with `Google`_, `Vertex AI`_, `OpenRouter`_ and `Eden AI`_ as Platform
   * `Vertex AI Gen AI`_ with `Vertex AI`_ as Platform
   * `DeepSeek's R1`_ with `OpenRouter`_ as Platform
   * `Amazon's Nova`_ with `AWS Bedrock`_ as Platform
-  * `Mistral's Mistral`_ with `Mistral`_ and `OpenRouter`_ as Platform
+  * `Mistral's Mistral`_ with `Mistral`_, `OpenRouter`_ and `Eden AI`_ as Platform
   * `Albert API`_ models with `Albert`_ as Platform (French government's sovereign AI gateway)
   * Open-weight models (`gpt-oss`_, `Qwen`_, `Gemma`_) with `Bedrock Mantle`_ as Platform
   * Open-weight models like Llama, Qwen, Kimi or GLM with `Together`_ as Platform
@@ -144,7 +145,7 @@ Supported Models & Platforms
 * **Embeddings Models**
   * `Gemini Text Embeddings`_ with `Google`_ and `OpenRouter`_
   * `Vertex AI Text Embeddings`_ with `Vertex AI`_
-  * `OpenAI's Text Embeddings`_ with `OpenAI`_, `Azure`_ and `OpenRouter`_ as Platform
+  * `OpenAI's Text Embeddings`_ with `OpenAI`_, `Azure`_, `OpenRouter`_ and `Eden AI`_ as Platform
   * `Voyage's Embeddings`_ with `Voyage`_ as Platform
   * `Venice's Embeddings`_ with `Venice`_ as Platform
   * `Mistral Embed`_ with `Mistral`_ and `OpenRouter`_ as Platform
@@ -156,6 +157,7 @@ Supported Models & Platforms
   * `OpenAI's Whisper`_ with `OpenAI`_ and `Azure`_ as Platform
   * `Mistral OCR`_ with `Mistral`_ as Platform
   * `TypeSafe's Jev`_ with `TypeSafe`_ as Platform, see :doc:`platform/typesafe`
+  * OCR and document parsing (invoices, resumes, identity documents) with `Eden AI`_ as Platform
   * `LM Studio Catalog`_ and `HuggingFace`_ Models  with `LM Studio`_ as Platform.
   * All models provided by `HuggingFace`_ can be listed with a command in the examples folder,
     and also filtered, e.g. ``php examples/huggingface/_model.php --provider=hf-inference --task=object-detection``
@@ -171,22 +173,24 @@ Supported Models & Platforms
   * Text-to-speech and speech-to-text with `Together`_ as Platform
   * `Venice TTS`_ with `Venice`_ as Platform
   * `Venice STT`_ with `Venice`_ as Platform
+  * Multi-provider TTS and STT with `Eden AI`_ as Platform
 
   For complete Deepgram setup and usage guide (TTS + STT), see :doc:`platform/deepgram`.
 * **Image/Video Models**
   * `Decart T2I`_ with `Decart`_  as Platform
   * `Decart T2V`_ with `Decart`_  as Platform
   * Image generation with `Together`_ as Platform
-  * Image and video generation with `Higgsfield`_ as Platform (asynchronous, poll-based)
+  * Image and video generation with `Higgsfield`_ as Platform (asynchronous, job-based)
   * `Venice T2I`_ with `Venice`_ as Platform
   * `Venice T2V`_ with `Venice`_ as Platform
+  * Image generation, object detection and explicit content detection with `Eden AI`_ as Platform
 
   For complete Venice setup and usage guide (chat, images, audio and video), see :doc:`platform/venice`.
 
 Generic Platforms
 ~~~~~~~~~~~~~~~~~
 
-Platforms like `LiteLLM`_ or `OpenRouter`_ provide a unified API to access multiple models from different providers.
+Platforms like `LiteLLM`_, `OpenRouter`_ or `Eden AI`_ provide a unified API to access multiple models from different providers.
 Therefore, they rely on endpoint and contract design, that is inspired by OpenAI's original GPT API - an implicit
 standard in the industry. Platforms using this de facto standard can be used with the generic bridge::
 
@@ -218,6 +222,10 @@ models, or bypassing the catalog.
 AWS Bedrock reaches its models through two inference engines - the SDK-based ``InvokeModel`` API
 and the OpenAI- and Anthropic-compatible Mantle endpoint - each with its own factory and model
 catalog. See :doc:`platform/bedrock` for the full setup and usage guide.
+
+Eden AI pairs its OpenAI-compatible chat and embeddings endpoints with expert models for OCR,
+document parsing, speech and images, which are addressed as ``feature/subfeature/provider``.
+See :doc:`platform/edenai` for the full setup and usage guide.
 
 Providers and Multi-Provider Platforms
 --------------------------------------
@@ -1111,6 +1119,8 @@ Code Examples
 * `PDF Input with GPT`_
 * `PDF Input with Claude`_
 
+.. _platform-asynchronous-jobs:
+
 Asynchronous Jobs
 -----------------
 
@@ -1186,12 +1196,32 @@ Before polling, the runner asks the client whether the handle is one it can reso
 bridge's own judgement. A handle the client turns down raises an ``InvalidArgumentException`` rather
 than a request that fails halfway.
 
+How *often* a job is worth asking about splits the same way, and for the same reason: a generation
+running for ten minutes is not answered any sooner by polling it every second, and the bridge is
+what knows that. So a handle states its interval too, and the runner honours it — one Higgsfield
+generation is polled every five seconds, one Replicate prediction every second, through the same
+runner and without the caller knowing either number. State a different one per call, or per runner,
+exactly as with the budget::
+
+    $result = $runner->wait($jobClient, $handle, pollInterval: 0.5);
+
+Both of those are the provider's knowledge. How many requests a job is worth is not — that is a
+caller's concern (a rate limit, an API bill, a request that may spend three round trips and no
+more), so a job cannot state it and a ``maxPolls`` ceiling caps whatever the budget and the interval
+would otherwise allow::
+
+    // at most three requests, however much time they leave unspent
+    $result = $runner->wait($jobClient, $handle, maxPolls: 3);
+
+A ceiling never buys polls the budget does not pay for: whichever of the two runs out first ends the
+wait, and the :class:`Symfony\\AI\\Platform\\Exception\\JobTimeoutException` says which one it was.
+
 In a Symfony application a runner using the application clock is available as
 ``ai.platform.job_runner`` and autowired through :class:`Symfony\\AI\\Platform\\Job\\JobRunner`. It
-carries no budget of its own, so the same shared service serves a job finishing in seconds and one
-running for minutes. Each job-capable platform also registers its client as
-``ai.platform.job_client.<name>``, autowired by the platform name as argument name - so the argument
-of a MiniMax job client has to be called ``$minimax``::
+carries no budget, interval or ceiling of its own, so the same shared service serves a job finishing
+in seconds and one running for minutes, each at the cadence its bridge states. Each job-capable
+platform also registers its client as ``ai.platform.job_client.<name>``, autowired by the platform
+name as argument name - so the argument of a MiniMax job client has to be called ``$minimax``::
 
     public function __construct(
         private JobRunner $jobRunner,
@@ -1206,6 +1236,9 @@ of a MiniMax job client has to be called ``$minimax``::
 
         // or bound it to what a request can afford
         $this->jobRunner->wait($this->minimax, $handle, maxDuration: 5);
+
+        // or to what it may spend
+        $this->jobRunner->wait($this->minimax, $handle, maxPolls: 3);
     }
 
 An application holding handles of several providers picks the client by the name the handle carries,
@@ -1240,14 +1273,69 @@ non-terminal, so a provider adding a state does not abort a running job.
 .. note::
 
     Only bridges whose provider works this way return a ``JobResult``; everything else answers
-    synchronously as before. Currently this is the MiniMax bridge, for video generation and
-    asynchronous speech synthesis.
+    synchronously as before. Currently these are:
+
+    * MiniMax, for video generation and asynchronous speech synthesis
+    * Higgsfield, for every image and video generation
+    * Venice, for video generation
+    * Replicate, for every prediction
+    * OpenAI, for batch requests
+
+Batch Requests
+~~~~~~~~~~~~~~
+
+Providers charge about half as much for work they may schedule at their own convenience. Such a
+batch is an asynchronous job carrying many requests, so an invocation asking for one is given many
+inputs, keyed by the identifier each result is reported back under::
+
+    $handle = $platform->invoke('gpt-4o-mini', [
+        'capital-fr' => new MessageBag(Message::ofUser('What is the capital of France?')),
+        'capital-de' => new MessageBag(Message::ofUser('What is the capital of Germany?')),
+    ], ['batch' => true, 'max_output_tokens' => 50])->asJob();
+
+Every input becomes the request it would have been on its own. The keys are yours: a batch comes
+back as an unordered file hours later, and the identifier is the only thing tying a result to the
+request it came from.
+
+A finished batch is a :class:`Symfony\\AI\\Platform\\Result\\BatchResult`, one
+:class:`Symfony\\AI\\Platform\\Result\\BatchItem` per request, read from the download as they
+are iterated - so the traversal is one-shot. Requests succeed and fail individually, and an item
+without a result says why: one the batch never sent, because it was canceled or expired, cost
+nothing and can be submitted again, where one that errored has to be fixed first::
+
+    foreach ($jobClient->getResult($handle)->getContent() as $item) {
+        if ($item->isSuccess()) {
+            echo $item->getId().': '.$item->getResult()->asText();
+        } elseif ($item->is(BatchItemCase::CANCELED, BatchItemCase::EXPIRED)) {
+            $queue->resubmit($item->getId());
+        }
+    }
+
+The result is fetched from the client rather than from a ``JobRunner`` here, because a canceled or
+expired batch is terminal without having succeeded: the runner reports it as a
+:class:`Symfony\\AI\\Platform\\Exception\\JobFailedException`, where the client still hands out
+the requests it did get through. On top of the interface, the OpenAI client reports a batch's
+progress in one request and cancels one that is no longer worth finishing.
+
+A successful item holds the ordinary result a synchronous invocation would have produced, except for
+structured output: the schema is sent with every request, but deserializing an answer happens when an
+invocation's result is converted, and a batch invocation's result is its handle - so an item holds
+the JSON as text, for the caller to deserialize and validate.
+
+.. note::
+
+    OpenAI decides per endpoint, not per model, which requests may be batched. A model its Responses
+    endpoint does not accept in a batch is rejected when the batch is created.
 
 Code Examples
 ~~~~~~~~~~~~~
 
 * `Asynchronous Video Generation with MiniMax`_
 * `Resuming a MiniMax Video Job`_
+* `Asynchronous Image Generation with Higgsfield`_
+* `Asynchronous Video Generation with Venice`_
+* `Asynchronous Text Generation with Replicate`_
+* `Batch Requests with GPT`_
 
 Audio Processing
 ----------------
@@ -1372,6 +1460,9 @@ completions, it is invoked with a single document content object - a
 
 The result exposes every ``Page`` with its markdown, dimensions, extracted layout images
 (with bounding boxes) and optional annotations.
+
+Eden AI also exposes OCR and document parsing (invoices, resumes, identity documents) from
+multiple providers. See :doc:`platform/edenai`.
 
 Code Examples
 ~~~~~~~~~~~~~
@@ -1725,11 +1816,11 @@ Thanks to Symfony's Cache component, platform calls can be cached to reduce call
 
     $firstResult = $cachePlatform->invoke('gpt-4o-mini', new MessageBag(Message::ofUser('What is the capital of France?')));
 
-    echo $firstResult->getContent().\PHP_EOL;
+    echo $firstResult->asText().\PHP_EOL;
 
     $secondResult = $cachePlatform->invoke('gpt-4o-mini', new MessageBag(Message::ofUser('What is the capital of France?')));
 
-    echo $secondResult->getContent().\PHP_EOL;
+    echo $secondResult->asText().\PHP_EOL;
 
 High Availability
 -----------------
@@ -1757,7 +1848,7 @@ the :class:`Symfony\\AI\\Platform\\Bridge\\Failover\\FailoverPlatform` can be us
 
     // # Ollama will fail as 'gpt-4o' is not available in the catalog
     $platform = new FailoverPlatform([
-        OllamaFactory::createPlatform(env('OLLAMA_HOST_URL'), HttpClient::create()),
+        OllamaFactory::createPlatform(env('OLLAMA_HOST_URL'), httpClient: HttpClient::create()),
         OpenAiFactory::createPlatform(env('OPENAI_API_KEY'), HttpClient::create()),
     ], $rateLimiter);
 
@@ -2239,6 +2330,7 @@ Code Examples
 .. _`Vertex AI`: https://cloud.google.com/vertex-ai/generative-ai/docs
 .. _`Google`: https://ai.google.dev/
 .. _`OpenRouter`: https://www.openrouter.ai/
+.. _`Eden AI`: https://www.edenai.co/
 .. _`DeepSeek's R1`: https://www.deepseek.com/
 .. _`Amazon's Nova`: https://nova.amazon.com
 .. _`Mistral's Mistral`: https://www.mistral.ai/
@@ -2270,6 +2362,10 @@ Code Examples
 .. _`Audio Input with GPT`: https://github.com/symfony/ai/blob/main/examples/openai/audio-input.php
 .. _`Asynchronous Video Generation with MiniMax`: https://github.com/symfony/ai/blob/main/examples/minimax/text-to-video.php
 .. _`Resuming a MiniMax Video Job`: https://github.com/symfony/ai/blob/main/examples/minimax/video-job-resume.php
+.. _`Asynchronous Image Generation with Higgsfield`: https://github.com/symfony/ai/blob/main/examples/higgsfield/text-to-image.php
+.. _`Asynchronous Video Generation with Venice`: https://github.com/symfony/ai/blob/main/examples/venice/text-to-video.php
+.. _`Asynchronous Text Generation with Replicate`: https://github.com/symfony/ai/blob/main/examples/replicate/chat-llama.php
+.. _`Batch Requests with GPT`: https://github.com/symfony/ai/blob/main/examples/openai/batch.php
 .. _`Audio Output with GPT`: https://github.com/symfony/ai/blob/main/examples/openai/audio-output.php
 .. _`ElevenLabs Speech-to-Text with SRT`: https://github.com/symfony/ai/blob/main/examples/elevenlabs/speech-to-text-srt.php
 .. _`PDF Input with GPT`: https://github.com/symfony/ai/blob/main/examples/openai/pdf-input-binary.php
@@ -2315,5 +2411,5 @@ Code Examples
 .. _`Venice STT`: https://docs.venice.ai/api-reference/endpoint/audio-transcription
 .. _`Venice T2I`: https://docs.venice.ai/api-reference/endpoint/generate-image
 .. _`Venice T2V`: https://docs.venice.ai/api-reference/endpoint/queue-video-generation
-.. _`Streaming Venice`: https://github.com/symfony/ai/blob/main/examples/venice/chat-as-stream.php
+.. _`Streaming Venice`: https://github.com/symfony/ai/blob/main/examples/venice/stream.php
 .. _`Embeddings with Venice`: https://github.com/symfony/ai/blob/main/examples/venice/embeddings.php

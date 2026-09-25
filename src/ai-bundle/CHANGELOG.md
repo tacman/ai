@@ -4,7 +4,9 @@ CHANGELOG
 0.14
 ----
 
+ * Add `edenai` platform configuration for the Eden AI bridge, including the `ai.platform.job_client.edenai` service for its asynchronous speech-to-text jobs
  * Add `typesafe` platform configuration for the TypeSafe bridge
+ * Register the OpenAI job client as `ai.platform.job_client.openai`, tagged and autowired by argument name, so a stored batch handle can be resolved from a worker
  * Show agent calls, platform invocations and tool executions in the performance timeline of the profiler
  * Add support for configuring a tool execution strategy per agent via the `execution_strategy` option under `tools` (`sequential`, `fiber`, or a custom service ID)
  * Add an `mcp_server` tool entry to `ai.agent.<name>.tools`, exposing the tools of a remote MCP server to an agent by referencing a connection configured under `mcp.clients`
@@ -14,6 +16,9 @@ CHANGELOG
  * Add `venice` platform configuration for chat, embeddings, image generation and editing, text-to-speech, speech-to-text and video generation
  * Add `higgsfield` platform configuration for asynchronous image and video generation
  * Register `ai.platform.job_runner` (autowired as `Platform\Job\JobRunner`) using the application clock and, for a platform running asynchronous jobs, its `ai.platform.job_client.<name>` client, built by the bridge factory and tagged `ai.platform.job_client`; render an asynchronous job in the profiler as the handle it carries instead of as a result
+ * Allow configuring the `elasticsearch` store with a pre-scoped `http_client` instead of an `endpoint`
+ * Build the `clickhouse`, `manticoresearch`, `milvus`, `neo4j`, `opensearch` and `supabase` stores through their bridge `StoreFactory`, so a pre-scoped `http_client` can replace the endpoint and credentials; either the endpoint or `http_client` must be configured, credentials require the endpoint, and a custom `http_client` is scoped to the endpoint when both are set
+ * Add an `http_client` option to the `manticoresearch`, `milvus` and `neo4j` stores
 
 0.13
 ----
