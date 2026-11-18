@@ -12,8 +12,8 @@
 namespace Symfony\AI\Platform\Bridge\Mistral\Batch;
 
 use Symfony\AI\Platform\Bridge\Mistral\Llm\ModelClient;
-use Symfony\AI\Platform\Bridge\Mistral\Ocr;
 use Symfony\AI\Platform\Bridge\Mistral\Llm\ResultConverter;
+use Symfony\AI\Platform\Bridge\Mistral\Ocr;
 use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Exception\JobFailedException;
 use Symfony\AI\Platform\Exception\RuntimeException;

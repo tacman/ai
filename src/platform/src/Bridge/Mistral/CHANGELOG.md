@@ -4,6 +4,8 @@ CHANGELOG
 1.0
 ---
 
+ * Add OCR inputs and OCR result conversion to Mistral batches
+
  * Add Voxtral text-to-speech support through the dedicated `/v1/audio/speech` endpoint, exposing a `TextToSpeech` model, model client and result converter; the `voice` option maps to `voice_id`, and `ref_audio` clones a voice for a single request
  * Route `voxtral-mini-tts-latest` to the speech endpoint instead of chat completions, and add `voxtral-mini-tts-3-0`, `voxtral-mini-tts-3` and `voxtral-mini-tts-2603` to the model catalog
 

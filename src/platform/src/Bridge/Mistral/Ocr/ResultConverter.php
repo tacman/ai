@@ -11,18 +11,18 @@
 
 namespace Symfony\AI\Platform\Bridge\Mistral\Ocr;
 
-use Symfony\AI\Platform\Bridge\Mistral\Ocr;
 use Symfony\AI\Platform\Bridge\Mistral\Batch\JobClient;
-use Symfony\AI\Platform\Job\JobHandle;
-use Symfony\AI\Platform\Result\JobResult;
-use Symfony\AI\Platform\Result\RawHttpResult;
+use Symfony\AI\Platform\Bridge\Mistral\Ocr;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\Image;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\OcrResult;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\Page;
 use Symfony\AI\Platform\Exception\RuntimeException;
+use Symfony\AI\Platform\Job\JobHandle;
 use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\Result\HttpStatusErrorHandlingTrait;
+use Symfony\AI\Platform\Result\JobResult;
 use Symfony\AI\Platform\Result\ObjectResult;
+use Symfony\AI\Platform\Result\RawHttpResult;
 use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsageExtractorInterface;
@@ -43,7 +43,7 @@ final class ResultConverter implements ResultConverterInterface
         return $model instanceof Ocr;
     }
 
-    public function convert(RawResultInterface $result, array $options = []): ObjectResult|\Symfony\AI\Platform\Result\JobResult
+    public function convert(RawResultInterface $result, array $options = []): ObjectResult|JobResult
     {
         if ($options[ModelClient::BATCH] ?? false) {
             return $this->startBatch($result, $options);
@@ -93,6 +93,12 @@ final class ResultConverter implements ResultConverterInterface
         ));
     }
 
+    public function getTokenUsageExtractor(): ?TokenUsageExtractorInterface
+    {
+        return null;
+    }
+
+    /** @param array<string, mixed> $options */
     private function startBatch(RawResultInterface|RawHttpResult $result, array $options): JobResult
     {
         $this->throwOnHttpError($result->getObject());
@@ -115,11 +121,5 @@ final class ResultConverter implements ResultConverterInterface
             'kind' => JobClient::KIND,
             'endpoint' => \is_string($endpoint) ? $endpoint : ModelClient::PATH,
         ], $this->provider, $maxDuration, JobClient::DEFAULT_POLL_INTERVAL));
-    }
-
-
-    public function getTokenUsageExtractor(): ?TokenUsageExtractorInterface
-    {
-        return null;
     }
 }
