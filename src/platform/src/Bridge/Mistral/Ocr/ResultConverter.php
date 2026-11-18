@@ -12,6 +12,10 @@
 namespace Symfony\AI\Platform\Bridge\Mistral\Ocr;
 
 use Symfony\AI\Platform\Bridge\Mistral\Ocr;
+use Symfony\AI\Platform\Bridge\Mistral\Batch\JobClient;
+use Symfony\AI\Platform\Job\JobHandle;
+use Symfony\AI\Platform\Result\JobResult;
+use Symfony\AI\Platform\Result\RawHttpResult;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\Image;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\OcrResult;
 use Symfony\AI\Platform\Bridge\Mistral\Ocr\Result\Page;
@@ -30,13 +34,21 @@ final class ResultConverter implements ResultConverterInterface
 {
     use HttpStatusErrorHandlingTrait;
 
+    public function __construct(private readonly string $provider = 'mistral')
+    {
+    }
+
     public function supports(Model $model): bool
     {
         return $model instanceof Ocr;
     }
 
-    public function convert(RawResultInterface $result, array $options = []): ObjectResult
+    public function convert(RawResultInterface $result, array $options = []): ObjectResult|\Symfony\AI\Platform\Result\JobResult
     {
+        if ($options[ModelClient::BATCH] ?? false) {
+            return $this->startBatch($result, $options);
+        }
+
         $httpResponse = $result->getObject();
 
         $this->throwOnHttpError($httpResponse);
@@ -45,8 +57,12 @@ final class ResultConverter implements ResultConverterInterface
             throw new RuntimeException(\sprintf('Unexpected response code %d: "%s"', $httpResponse->getStatusCode(), $httpResponse->getContent(false)));
         }
 
-        $data = $result->getData();
+        return $this->convertData($result->getData());
+    }
 
+    /** @param array<string, mixed> $data */
+    public function convertData(array $data): ObjectResult
+    {
         if (!isset($data['pages']) || !\is_array($data['pages'])) {
             throw new RuntimeException('Response does not contain pages.');
         }
@@ -76,6 +92,31 @@ final class ResultConverter implements ResultConverterInterface
             $data['document_annotation'] ?? null,
         ));
     }
+
+    private function startBatch(RawResultInterface|RawHttpResult $result, array $options): JobResult
+    {
+        $this->throwOnHttpError($result->getObject());
+
+        $data = $result->getData();
+        $id = $data['id'] ?? null;
+
+        if (!\is_string($id) || '' === $id) {
+            throw new RuntimeException('The Mistral response does not contain a batch identifier.');
+        }
+
+        $endpoint = $data['endpoint'] ?? null;
+        $timeoutHours = $options[ModelClient::TIMEOUT_HOURS] ?? null;
+
+        // The job states the timeout it was asked for nowhere in its own representation, so the
+        // longest the batch may take is carried over from the request that started it.
+        $maxDuration = \is_int($timeoutHours) && 0 < $timeoutHours ? $timeoutHours * 3600 : JobClient::DEFAULT_MAX_DURATION;
+
+        return new JobResult(new JobHandle($id, [
+            'kind' => JobClient::KIND,
+            'endpoint' => \is_string($endpoint) ? $endpoint : ModelClient::PATH,
+        ], $this->provider, $maxDuration, JobClient::DEFAULT_POLL_INTERVAL));
+    }
+
 
     public function getTokenUsageExtractor(): ?TokenUsageExtractorInterface
     {

@@ -12,6 +12,7 @@
 namespace Symfony\AI\Platform\Bridge\Mistral\Batch;
 
 use Symfony\AI\Platform\Bridge\Mistral\Llm\ModelClient;
+use Symfony\AI\Platform\Bridge\Mistral\Ocr;
 use Symfony\AI\Platform\Bridge\Mistral\Llm\ResultConverter;
 use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Exception\JobFailedException;
@@ -104,11 +105,11 @@ final class JobClient implements JobClientInterface
 
         $endpoint = $handle->get('endpoint', ModelClient::PATH);
 
-        if (ModelClient::PATH !== $endpoint) {
+        if (!\in_array($endpoint, [ModelClient::PATH, Ocr\ModelClient::PATH], true)) {
             throw new RuntimeException(\sprintf('The Mistral batch "%s" was submitted to "%s", which this bridge cannot convert the results of.', $handle->getId(), \is_string($endpoint) ? $endpoint : get_debug_type($endpoint)));
         }
 
-        return new BatchResult($this->readItems($outputFile, $errorFile, $status->getCase()));
+        return new BatchResult($this->readItems($outputFile, $errorFile, $status->getCase(), $endpoint));
     }
 
     /**
@@ -149,7 +150,7 @@ final class JobClient implements JobClientInterface
     /**
      * @return \Generator<BatchItem>
      */
-    private function readItems(?string $outputFile, ?string $errorFile, JobStateCase $state): \Generator
+    private function readItems(?string $outputFile, ?string $errorFile, JobStateCase $state, string $endpoint): \Generator
     {
         foreach ([$outputFile, $errorFile] as $fileId) {
             if (!\is_string($fileId)) {
@@ -157,7 +158,7 @@ final class JobClient implements JobClientInterface
             }
 
             foreach ($this->readLines($fileId) as $line) {
-                yield $this->toItem($line, $state);
+                yield $this->toItem($line, $state, $endpoint);
             }
         }
     }
@@ -167,12 +168,16 @@ final class JobClient implements JobClientInterface
      * @param JobStateCase         $state the outcome of the batch itself, which is the only thing
      *                                    saying whether a request failed or was never sent
      */
-    private function toItem(array $line, JobStateCase $state): BatchItem
+    private function toItem(array $line, JobStateCase $state, string $endpoint): BatchItem
     {
         $customId = (string) ($line['custom_id'] ?? '');
         $response = \is_array($line['response'] ?? null) ? $line['response'] : [];
         $statusCode = \is_int($response['status_code'] ?? null) ? $response['status_code'] : null;
-        $body = \is_array($response['body'] ?? null) ? $response['body'] : [];
+        $body = $response['body'] ?? null;
+        if (\is_string($body)) {
+            $body = json_decode($body, true);
+        }
+        $body = \is_array($body) ? $body : [];
         $error = $line['error'] ?? null;
 
         // The failure test of Mistral's own SDK: an error on the line, or a status code of 400 or above.
@@ -197,7 +202,7 @@ final class JobClient implements JobClientInterface
         }
 
         try {
-            return BatchItem::succeeded($customId, $this->itemConverter->convertData($body));
+            return BatchItem::succeeded($customId, (Ocr\ModelClient::PATH === $endpoint ? new Ocr\ResultConverter() : $this->itemConverter)->convertData($body));
         } catch (ExceptionInterface $exception) {
             // One unreadable response is that request's problem, not the batch's.
             return BatchItem::errored($customId, $exception->getMessage());
